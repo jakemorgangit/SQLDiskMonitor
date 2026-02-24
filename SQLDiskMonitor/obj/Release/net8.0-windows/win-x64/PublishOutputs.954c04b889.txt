@@ -1,0 +1,2 @@
+B:\Google Drive\Projects\Github\repos\sql-snippets\CURSOR\DiskStats\LatencyMonitor\LatencyMonitor\bin\Release\net8.0-windows\win-x64\publish\LatencyMonitor.pdb
+B:\Google Drive\Projects\Github\repos\sql-snippets\CURSOR\DiskStats\LatencyMonitor\LatencyMonitor\bin\Release\net8.0-windows\win-x64\publish\LatencyMonitor.exe

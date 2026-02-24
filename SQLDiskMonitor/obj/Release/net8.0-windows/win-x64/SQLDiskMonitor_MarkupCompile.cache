@@ -1,0 +1,20 @@
+﻿SQLDiskMonitor
+1.0.0.0
+
+winexe
+C#
+.cs
+b:\Google Drive\Projects\Github\repos\sql-snippets\CURSOR\DiskStats\LatencyMonitor\LatencyMonitor\obj\Release\net8.0-windows\win-x64\
+SQLDiskMonitor
+none
+false
+TRACE;RELEASE;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
+b:\Google Drive\Projects\Github\repos\sql-snippets\CURSOR\DiskStats\LatencyMonitor\LatencyMonitor\App.xaml
+41276437257
+
+9-806988013
+2192119530185
+AboutWindow.xaml;AddServerDialog.xaml;LoadSessionDialog.xaml;MainWindow.xaml;
+
+False
+
