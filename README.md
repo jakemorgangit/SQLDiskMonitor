@@ -42,7 +42,7 @@ Grab the latest `SQLDiskMonitor.exe` from the [Releases](../../releases) page.
 Prerequisites: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ```bash
-cd SQLDiskMonitor/SQLDiskMonitor
+cd SQLDiskMonitor
 dotnet publish -c Release -r win-x64 --self-contained \
   -p:PublishSingleFile=true \
   -p:IncludeNativeLibrariesForSelfExtract=true
