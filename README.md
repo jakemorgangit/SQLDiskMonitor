@@ -2,8 +2,6 @@
 
 Real-time disk I/O performance monitoring for SQL Server. Tracks read/write latency, IOPS, and throughput across all database files with live charts.
 
-**v1.0** by [Jake Morgan](https://blackcat.wales) @ Blackcat Data Solutions Ltd
-
 ---
 
 ## Features
