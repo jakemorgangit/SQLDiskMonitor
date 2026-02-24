@@ -109,4 +109,4 @@ MIT
 
 ## Author
 
-**Jake Morgan** — [Blackcat Data Solutions Ltd](https://blackcat.wales)
+**Jake Morgan** - [Blackcat Data Solutions Ltd](https://blackcat.wales)
