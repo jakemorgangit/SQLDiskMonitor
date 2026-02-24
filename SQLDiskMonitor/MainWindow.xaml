@@ -1,0 +1,222 @@
+<Window x:Class="SQLDiskMonitor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="SQL Disk Monitor"
+        Icon="app.ico"
+        Width="1400" Height="870" MinWidth="1000" MinHeight="550"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}" FontFamily="Segoe UI"
+        Loaded="Window_Loaded" Closing="Window_Closing"
+        KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <ControlTemplate x:Key="DarkTracker">
+            <oxy:TrackerControl Position="{Binding Position}"
+                                LineExtents="{Binding PlotModel.PlotArea}"
+                                Background="#0d1117"
+                                BorderBrush="#30363d"
+                                BorderThickness="1"
+                                LineStroke="#4458a6ff"
+                                ShowPointer="True"
+                                CornerRadius="4"
+                                Distance="7">
+                <oxy:TrackerControl.Content>
+                    <TextBlock Text="{Binding}" Foreground="#e6edf3"
+                               FontFamily="Consolas" FontSize="11" Margin="8,5"/>
+                </oxy:TrackerControl.Content>
+            </oxy:TrackerControl>
+        </ControlTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ════════════════════════════════════════════
+             LEFT SIDEBAR
+             ════════════════════════════════════════════ -->
+        <Border Grid.Column="0" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Padding="12,10,12,4">
+                    <StackPanel>
+                        <TextBlock Text="SQL Servers" FontSize="14" FontWeight="Bold"
+                                   Foreground="{StaticResource FgBrightBrush}"/>
+                        <TextBlock Text="Double-click to connect" FontSize="10"
+                                   Foreground="{StaticResource FgMutedBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,8">
+                    <Button Content="＋ Add Server" Click="AddServer_Click" Margin="0,4"
+                            Padding="8,7" FontSize="12" Background="{StaticResource AccentBrush}"/>
+                    <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,4"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4">
+                        <Button Content="File" Click="FileMenu_Click" Padding="8,4" FontSize="10"
+                                Background="Transparent" BorderThickness="0" FontWeight="Normal"/>
+                        <Button Content="Help" Click="HelpMenu_Click" Padding="8,4" FontSize="10"
+                                Background="Transparent" BorderThickness="0" FontWeight="Normal"
+                                Margin="4,0,0,0"/>
+                        <Button Content="About" Click="About_Click" Padding="8,4" FontSize="10"
+                                Background="Transparent" BorderThickness="0" FontWeight="Normal"
+                                Margin="4,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox x:Name="lstServers" Background="Transparent" BorderThickness="0"
+                         Margin="6,4" HorizontalContentAlignment="Stretch"
+                         MouseDoubleClick="LstServers_DoubleClick">
+                    <ListBox.ContextMenu>
+                        <ContextMenu Background="{StaticResource PanelAltBrush}" BorderBrush="{StaticResource BorderBrush}">
+                            <MenuItem Header="Connect" Click="ServerConnect_Click"/>
+                            <MenuItem Header="Edit…" Click="ServerEdit_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Delete" Click="ServerDelete_Click"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0,2"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Bd" Background="{StaticResource CardBrush}"
+                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                CornerRadius="5" Padding="10,8" Cursor="Hand">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="Bd" Property="Background" Value="#1a2332"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ════════════════════════════════════════════
+             MAIN CONTENT
+             ════════════════════════════════════════════ -->
+        <DockPanel Grid.Column="1">
+
+            <!-- ═══ Control / Filter Bar ═══ -->
+            <Border DockPanel.Dock="Top" Background="{StaticResource PanelAltBrush}" Height="42"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                    <Button x:Name="btnStart" Content="▶ Start" IsEnabled="False"
+                            Height="28" Click="BtnStart_Click" Padding="12,2">
+                        <Button.Background>
+                            <SolidColorBrush Color="#238636"/>
+                        </Button.Background>
+                    </Button>
+                    <Button x:Name="btnStop" Content="■ Stop" IsEnabled="False"
+                            Margin="4,0,0,0" Height="28" Click="BtnStop_Click" Padding="12,2">
+                        <Button.Background>
+                            <SolidColorBrush Color="#da3633"/>
+                        </Button.Background>
+                    </Button>
+                    <Button x:Name="btnClear" Content="Clear" IsEnabled="False"
+                            Margin="4,0,0,0" Height="28" Click="BtnClear_Click" Padding="10,2"/>
+
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="10,8" Height="24"/>
+
+                    <TextBlock Text="Interval:" Margin="4,0,4,0" Foreground="{StaticResource FgMutedBrush}"/>
+                    <Slider x:Name="sldInterval" Width="140" Minimum="0" Maximum="8"
+                            TickPlacement="BottomRight" TickFrequency="1" IsSnapToTickEnabled="True"
+                            Value="4" VerticalAlignment="Center"
+                            ValueChanged="SldInterval_ValueChanged"/>
+                    <TextBlock x:Name="lblInterval" Text="1 min" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}" Margin="6,0,0,0" Width="42"/>
+
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="8,8" Height="24"/>
+
+                    <TextBlock Text="Drive:" Margin="4,0,4,0" Foreground="{StaticResource FgMutedBrush}"/>
+                    <ComboBox x:Name="cmbDrive" Width="55" Height="24"
+                              SelectionChanged="Filter_Changed"/>
+                    <TextBlock Text="DB:" Margin="8,0,4,0" Foreground="{StaticResource FgMutedBrush}"/>
+                    <ComboBox x:Name="cmbDatabase" Width="160" Height="24"
+                              SelectionChanged="Filter_Changed"/>
+                    <TextBlock Text="Group:" Margin="8,0,4,0" Foreground="{StaticResource FgMutedBrush}"/>
+                    <ComboBox x:Name="cmbGroupBy" Width="100" Height="24"
+                              SelectionChanged="GroupBy_Changed"/>
+
+                    <TextBlock x:Name="lblStatus" Foreground="{StaticResource YellowBrush}"
+                               Margin="14,0,0,0" FontSize="11"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══ Status Bar ═══ -->
+            <StatusBar DockPanel.Dock="Bottom" Padding="8,3">
+                <StatusBarItem>
+                    <TextBlock x:Name="statusConn" Text="No connection"
+                               Foreground="{StaticResource FgMutedBrush}" FontSize="11"/>
+                </StatusBarItem>
+                <Separator Margin="10,2"/>
+                <StatusBarItem>
+                    <TextBlock x:Name="statusSession" FontSize="11"/>
+                </StatusBarItem>
+                <Separator Margin="10,2"/>
+                <StatusBarItem>
+                    <TextBlock x:Name="statusCapture" FontSize="11"/>
+                </StatusBarItem>
+                <StatusBarItem HorizontalAlignment="Right">
+                    <TextBlock Text="SQL Disk Monitor v1.0 — Blackcat Data Solutions" FontSize="10"
+                               Foreground="{StaticResource DisabledBrush}"/>
+                </StatusBarItem>
+            </StatusBar>
+
+            <!-- ═══ Legend Panel ═══ -->
+            <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
+                    MinHeight="30" MaxHeight="200"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="legendPanel" Margin="8,4">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu Background="{StaticResource PanelAltBrush}" BorderBrush="{StaticResource BorderBrush}">
+                                <MenuItem Header="Show All Series" Click="ShowAll_Click"/>
+                                <MenuItem Header="Hide All Series" Click="HideAll_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Expand All Databases" Click="ExpandAll_Click"/>
+                                <MenuItem Header="Collapse All Databases" Click="CollapseAll_Click"/>
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- ═══ 6-Chart Grid (3 rows × 2 columns) ═══ -->
+            <Grid x:Name="chartGrid">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <oxy:PlotView x:Name="plotReadLat"   Grid.Row="0" Grid.Column="0" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+                <oxy:PlotView x:Name="plotWriteLat"  Grid.Row="0" Grid.Column="1" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+                <oxy:PlotView x:Name="plotReadIops"  Grid.Row="1" Grid.Column="0" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+                <oxy:PlotView x:Name="plotWriteIops" Grid.Row="1" Grid.Column="1" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+                <oxy:PlotView x:Name="plotReadMbps"  Grid.Row="2" Grid.Column="0" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+                <oxy:PlotView x:Name="plotWriteMbps" Grid.Row="2" Grid.Column="1" Background="{StaticResource BgBrush}" DefaultTrackerTemplate="{StaticResource DarkTracker}"/>
+            </Grid>
+
+        </DockPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,83 @@
+<Window x:Class="SQLDiskMonitor.LoadSessionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Load Session" Width="520" Height="370"
+        Icon="app.ico"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource BgBrush}" FontFamily="Segoe UI">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <TextBlock Text="File:" Width="40"/>
+            <TextBox x:Name="txtFilePath" Width="370" Height="24" IsReadOnly="True"/>
+            <Button Content="Browse…" Margin="6,0,0,0" Height="24" Click="Browse_Click"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Margin="0,12,0,0" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Server:" FontWeight="SemiBold" Margin="0,0,12,2"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="lblServer" Foreground="{StaticResource FgMutedBrush}"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Captures:" FontWeight="SemiBold" Margin="0,0,12,2"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="lblCaptures" Foreground="{StaticResource FgMutedBrush}"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Interval:" FontWeight="SemiBold" Margin="0,0,12,2"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="lblInterval" Foreground="{StaticResource FgMutedBrush}"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="First:" FontWeight="SemiBold" Margin="0,0,12,2"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="lblFirst" Foreground="{StaticResource FgMutedBrush}"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Last:" FontWeight="SemiBold" Margin="0,0,12,2"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="lblLast" Foreground="{StaticResource FgMutedBrush}"/>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="2" Text="Timeline Filter" FontWeight="SemiBold" Margin="0,14,0,4"
+                   FontSize="13" Foreground="{StaticResource FgBrightBrush}"/>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="From:" Margin="0,0,6,0"/>
+            <TextBox Grid.Column="1" x:Name="txtFrom" Height="24"/>
+            <TextBlock Grid.Column="3" Text="To:" Margin="0,0,6,0"/>
+            <TextBox Grid.Column="4" x:Name="txtTo" Height="24"/>
+        </Grid>
+
+        <TextBlock Grid.Row="4" Text="Format: yyyy-MM-dd HH:mm:ss  (leave blank for full range)"
+                   FontSize="10" Foreground="{StaticResource DisabledBrush}" Margin="0,4,0,0"/>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Load" Width="90" Height="28" x:Name="btnLoad"
+                    IsEnabled="False" Click="Load_Click" Background="{StaticResource AccentBrush}"/>
+            <Button Content="Cancel" Width="90" Height="28" Margin="8,0,0,0" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
