@@ -1,0 +1,52 @@
+<Window x:Class="SQLDiskMonitor.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About SQL Disk Monitor" Width="420" Height="320"
+        Icon="app.ico"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{StaticResource BgBrush}" FontFamily="Segoe UI">
+    <Grid Margin="30,20,30,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="SQL Disk Monitor"
+                   FontSize="20" FontWeight="Bold" Foreground="{StaticResource FgBrightBrush}"
+                   HorizontalAlignment="Center"/>
+
+        <TextBlock Grid.Row="1" Text="Version 1.0" Margin="0,6,0,0"
+                   FontSize="13" Foreground="{StaticResource FgBrush}" HorizontalAlignment="Center"/>
+
+        <TextBlock Grid.Row="2" Margin="0,16,0,0" HorizontalAlignment="Center"
+                   FontSize="12" Foreground="{StaticResource FgMutedBrush}">
+            <Run Text="by "/><Run Text="Jake Morgan" FontWeight="SemiBold" Foreground="{StaticResource FgBrightBrush}"/>
+        </TextBlock>
+
+        <TextBlock Grid.Row="3" Text="Blackcat Data Solutions Ltd" Margin="0,4,0,0"
+                   FontSize="12" Foreground="{StaticResource FgMutedBrush}" HorizontalAlignment="Center"/>
+
+        <TextBlock Grid.Row="4" Margin="0,8,0,0" HorizontalAlignment="Center">
+            <Hyperlink x:Name="lnkWebsite" RequestNavigate="Hyperlink_RequestNavigate"
+                       NavigateUri="https://blackcat.wales" Foreground="{StaticResource AccentBrush}">
+                https://blackcat.wales
+            </Hyperlink>
+        </TextBlock>
+
+        <TextBlock Grid.Row="5" Margin="0,18,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                   FontSize="11" Foreground="{StaticResource FgMutedBrush}">
+            Real-time disk I/O performance monitoring for SQL Server.
+            Tracks read/write latency, IOPS, and throughput across all
+            database files with live charts, filterable by database,
+            drive, or individual file.
+        </TextBlock>
+
+        <Button Grid.Row="6" Content="Close" Width="90" Height="28" Margin="0,12,0,0"
+                HorizontalAlignment="Center" Click="Close_Click"/>
+    </Grid>
+</Window>

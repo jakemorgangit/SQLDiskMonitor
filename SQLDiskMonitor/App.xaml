@@ -1,0 +1,245 @@
+<Application x:Class="SQLDiskMonitor.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+
+        <!-- ═══ Named Color Brushes — dark navy theme ═══ -->
+        <SolidColorBrush x:Key="BgBrush"        Color="#0d1117"/>
+        <SolidColorBrush x:Key="PanelBrush"     Color="#161b22"/>
+        <SolidColorBrush x:Key="PanelAltBrush"  Color="#1c2333"/>
+        <SolidColorBrush x:Key="SidebarBrush"   Color="#0d1117"/>
+        <SolidColorBrush x:Key="CardBrush"      Color="#161b22"/>
+        <SolidColorBrush x:Key="CardHoverBrush" Color="#1f2937"/>
+        <SolidColorBrush x:Key="BorderBrush"    Color="#30363d"/>
+        <SolidColorBrush x:Key="FgBrush"        Color="#c9d1d9"/>
+        <SolidColorBrush x:Key="FgBrightBrush"  Color="#e6edf3"/>
+        <SolidColorBrush x:Key="FgMutedBrush"   Color="#8b949e"/>
+        <SolidColorBrush x:Key="AccentBrush"    Color="#58a6ff"/>
+        <SolidColorBrush x:Key="GreenBrush"     Color="#3fb950"/>
+        <SolidColorBrush x:Key="RedBrush"       Color="#f85149"/>
+        <SolidColorBrush x:Key="YellowBrush"    Color="#d29922"/>
+        <SolidColorBrush x:Key="DisabledBrush"  Color="#484f58"/>
+        <SolidColorBrush x:Key="SelectionBrush" Color="#1f6feb"/>
+
+        <!-- ═══ System Color Overrides ═══ -->
+        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}"          Color="#1c2333"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}"      Color="#e6edf3"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}"         Color="#21262d"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}"     Color="#c9d1d9"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"       Color="#1f6feb"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}"   Color="#e6edf3"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#30363d"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}"            Color="#1c2333"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}"        Color="#c9d1d9"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuHighlightBrushKey}"   Color="#1f6feb"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuBarBrushKey}"         Color="#161b22"/>
+
+        <!-- ═══ TextBlock ═══ -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ═══ Button ═══ -->
+        <Style TargetType="Button">
+            <Setter Property="Background"  Value="#21262d"/>
+            <Setter Property="Foreground"  Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+            <Setter Property="FontSize"    Value="12"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Padding"     Value="10,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#30363d"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#3d444d"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══ TextBox ═══ -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background"   Value="#0d1117"/>
+            <Setter Property="Foreground"   Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="BorderBrush"  Value="{StaticResource BorderBrush}"/>
+            <Setter Property="CaretBrush"   Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource SelectionBrush}"/>
+            <Setter Property="FontFamily"   Value="Segoe UI"/>
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="Padding"      Value="6,3"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ═══ PasswordBox ═══ -->
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background"   Value="#0d1117"/>
+            <Setter Property="Foreground"   Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="BorderBrush"  Value="{StaticResource BorderBrush}"/>
+            <Setter Property="CaretBrush"   Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource SelectionBrush}"/>
+            <Setter Property="FontFamily"   Value="Segoe UI"/>
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="Padding"      Value="6,3"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ═══ RadioButton ═══ -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ═══ CheckBox ═══ -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ═══ ComboBox Toggle Button ═══ -->
+        <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2"
+                        Background="#0d1117"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3"/>
+                <Path x:Name="Arrow" Grid.Column="1" Data="M0,0 L4,4 L8,0"
+                      Fill="{StaticResource FgMutedBrush}" StrokeThickness="0"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- ═══ ComboBox ═══ -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Template="{StaticResource ComboBoxToggleButton}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                              Margin="6,2,24,2" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom" Focusable="False" AllowsTransparency="True"
+                                   PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}" MaxHeight="300"
+                                      SnapsToDevicePixels="True">
+                                    <Border Background="#1c2333"
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="4">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <StackPanel IsItemsHost="True"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══ ComboBoxItem ═══ -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground"  Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Padding"     Value="8,5"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#30363d"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource SelectionBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══ Menu / MenuItem ═══ -->
+        <Style TargetType="Menu">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="12"/>
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+        </Style>
+
+        <!-- ═══ StatusBar ═══ -->
+        <Style TargetType="StatusBar">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource FgBrush}"/>
+        </Style>
+
+        <!-- ═══ ToolTip ═══ -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background"  Value="#1c2333"/>
+            <Setter Property="Foreground"  Value="{StaticResource FgBrightBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="FontFamily"  Value="Consolas"/>
+            <Setter Property="FontSize"    Value="11"/>
+            <Setter Property="Padding"     Value="8,6"/>
+        </Style>
+
+        <!-- ═══ Separator ═══ -->
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+        </Style>
+
+        <!-- ═══ Slider ═══ -->
+        <Style TargetType="Slider">
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        </Style>
+
+    </Application.Resources>
+</Application>

@@ -8,18 +8,18 @@ Real-time disk I/O performance monitoring for SQL Server. Tracks read/write late
 
 ## Features
 
-- **Six live charts** in a 3×2 grid — Avg Read/Write Latency (ms), Read/Write IOPS, Read/Write Throughput (MB/s)
-- **Configurable capture interval** — from 1 second to 5 minutes via slider
-- **Saved connections** — stored securely in Windows Credential Manager with support for Windows Auth and SQL Auth
-- **Grouping modes** — view data grouped by Database, Drive, or individual File
-- **Interactive legend** — click to show/hide series, expand/collapse database file groups
-- **Hover tooltips** — dark-themed tracker that follows the cursor across data points
-- **Session save/load** — export to JSON, reload later with a date/time range filter
-- **CSV export** — full delta data for offline analysis
-- **Chart image export** — save the current chart view as PNG
-- **Diagnostic dump** — Ctrl+D captures a raw before/after snapshot to verify physical I/O activity
-- **Dark theme** — sleek navy/blue interface styled for long monitoring sessions
-- **Standalone exe** — single-file self-contained deployment, no runtime install required
+- **Six live charts** in a 3×2 grid - Avg Read/Write Latency (ms), Read/Write IOPS, Read/Write Throughput (MB/s)
+- **Configurable capture interval** - from 1 second to 5 minutes via slider
+- **Saved connections** - stored securely in Windows Credential Manager with support for Windows Auth and SQL Auth
+- **Grouping modes** - view data grouped by Database, Drive, or individual File
+- **Interactive legend** - click to show/hide series, expand/collapse database file groups
+- **Hover tooltips** - dark-themed tracker that follows the cursor across data points
+- **Session save/load** - export to JSON, reload later with a date/time range filter
+- **CSV export** - full delta data for offline analysis
+- **Chart image export** - save the current chart view as PNG
+- **Diagnostic dump** - Ctrl+D captures a raw before/after snapshot to verify physical I/O activity
+- **Dark theme** - sleek navy/blue interface styled for long monitoring sessions
+- **Standalone exe** - single-file self-contained deployment, no runtime install required
 
 ## Screenshot
 
@@ -31,7 +31,7 @@ Real-time disk I/O performance monitoring for SQL Server. Tracks read/write late
 - **Target:** SQL Server 2016+ (uses `sys.dm_io_virtual_file_stats` and `sys.master_files`)
 - **Permissions:** `VIEW SERVER STATE` on the target SQL Server instance
 
-No .NET runtime installation is needed — the published exe is fully self-contained.
+No .NET runtime installation is needed - the published exe is fully self-contained.
 
 ## Download
 
@@ -53,13 +53,13 @@ The output exe will be in `bin/Release/net8.0-windows/win-x64/publish/`.
 ## Usage
 
 1. **Launch** `SQLDiskMonitor.exe`
-2. **Add a server** — click "+ Add Server" in the left sidebar, enter connection details, and save
-3. **Connect** — double-click a saved server (or right-click → Connect)
-4. **Set the interval** — drag the slider to choose capture frequency (1s–5min)
-5. **Start capturing** — click the green **Start** button (or press F5)
-6. **Filter** — use the Drive, DB, and Group dropdowns to focus the view
-7. **Toggle series** — click legend items to show/hide individual databases, drives, or files
-8. **Stop** — click **Stop** (or press F6)
+2. **Add a server** - click "+ Add Server" in the left sidebar, enter connection details, and save
+3. **Connect** - double-click a saved server (or right-click → Connect)
+4. **Set the interval** - drag the slider to choose capture frequency (1s–5min)
+5. **Start capturing** - click the green **Start** button (or press F5)
+6. **Filter** - use the Drive, DB, and Group dropdowns to focus the view
+7. **Toggle series** - click legend items to show/hide individual databases, drives, or files
+8. **Stop** - click **Stop** (or press F6)
 
 ### Keyboard Shortcuts
 
@@ -76,7 +76,7 @@ The output exe will be in `bin/Release/net8.0-windows/win-x64/publish/`.
 | Option | Description |
 |---|---|
 | Windows Auth | Uses the current Windows identity (Kerberos/NTLM) |
-| SQL Auth | Username/password — password stored in Windows Credential Manager |
+| SQL Auth | Username/password - password stored in Windows Credential Manager |
 | Trust Certificate | Skips TLS certificate validation (useful for self-signed certs) |
 | Encrypt | Forces TLS encryption on the connection |
 | Timeout | Connection timeout in seconds (default 10) |
@@ -94,7 +94,7 @@ On each capture tick the tool queries `sys.dm_io_virtual_file_stats` joined to `
 | Read Throughput (MB/s) | Δ `num_of_bytes_read` / 1 048 576 / elapsed seconds |
 | Write Throughput (MB/s) | Δ `num_of_bytes_written` / 1 048 576 / elapsed seconds |
 
-These are **physical I/O** metrics. Reads served entirely from the buffer cache will show as zero — this is expected and healthy. If you need to force physical reads for testing, run `DBCC DROPCLEANBUFFERS` (not recommended on production).
+These are **physical I/O** metrics. Reads served entirely from the buffer cache will show as zero - this is expected and healthy. If you need to force physical reads for testing, run `DBCC DROPCLEANBUFFERS` (not recommended on production).
 
 ## Tech Stack
 
