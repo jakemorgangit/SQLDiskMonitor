@@ -14,6 +14,10 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 - Drive and disk names, LUNs and tags appear on every disk card. The **Inventory** view on the Disks page lists every disk in one editable grid, with a CSV export.
 - **Presets** fill in the published limits for Azure Premium SSD P1–P80 (including credit-based burst), Premium SSD v2, Ultra, AWS gp3/io2/st1 and GCP Hyperdisk.
 - **Detect LUNs from host** reads disk numbers, SCSI LUNs and models from the SQL Server host over WMI.
+- **Import from CSV**: fill in disk settings for many disks at once. **CSV template** saves a file with the right column headers and one row per volume. Fill in the blanks (in Excel, for example) and choose **Import CSV**.
+  - Rows are matched to disks by the first column (`F`, `F:`, `F:\` or a mount-point path), or by a column named Volume or Drive letter if there is one.
+  - Only empty fields are filled; values already entered are never overwritten. Unknown columns and unmatched rows are reported.
+  - Recognised columns: Label, Drive name, Disk name, LUN, Disk number, Device / model, Tier, Max IOPS, Max MB/s, Burst IOPS, Burst MB/s, Size GB, Monthly cost, Cost per GB, Cost per IOPS, Cost per MB/s, Tags, Notes. Common variations (for example `IOPS`, `Resource name`, `SKU`) also work.
 - **Notes**: a free-text description per disk, plus a timestamped change log ("upgraded to P40", "added tempdb files") that appears as markers on the charts.
 
 **Overview**

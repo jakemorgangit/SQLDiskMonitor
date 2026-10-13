@@ -165,6 +165,83 @@ public class DiskConfigTests
     }
 }
 
+public class DiskCsvImportTests
+{
+    private static List<DiskConfig> Disks() =>
+    [
+        new() { Volume = "F:\\", Label = "SQLVMDATA1", Lun = 1 },
+        new() { Volume = "G:\\", Label = "SQLVMLOG" },
+        new() { Volume = "E:\\Mounts\\Data01\\" },
+    ];
+
+    [Fact]
+    public void Fills_only_empty_fields_matched_by_drive_letter()
+    {
+        var disks = Disks();
+        var csv = "Drive,Label,LUN,Disk name,Max IOPS,Max MB/s,Owner\n" +
+                  "F,New label,5,sqlvm-datadisk-01,\"5,000\",200 MB/s,DBA\n" +
+                  "g:\\,,2,sqlvm-logdisk-01,£2300,\n" +
+                  "E:\\Mounts\\Data01,,0,,,\n" +
+                  "Z,,9,,,\n";
+        var r = DiskCsvImport.Apply(csv, disks);
+
+        var f = disks[0];
+        Assert.Equal("SQLVMDATA1", f.Label);          // already set: kept
+        Assert.Equal(1, f.Lun);                       // already set: kept
+        Assert.Equal("sqlvm-datadisk-01", f.DiskName);
+        Assert.Equal(5000, f.MaxIops);
+        Assert.Equal(200, f.MaxMbps);
+
+        var g = disks[1];
+        Assert.Equal(2, g.Lun);
+        Assert.Equal("sqlvm-logdisk-01", g.DiskName);
+        Assert.Equal(2300, g.MaxIops);
+
+        Assert.Equal(0, disks[2].Lun);                // LUN 0 is a real value
+        Assert.Equal(["Z"], r.UnmatchedRows);
+        Assert.Equal(["Owner"], r.IgnoredColumns);
+        Assert.Equal(3, r.Changed.Count);
+        Assert.Equal(3, r.RowsMatched);
+    }
+
+    [Fact]
+    public void Uses_first_column_when_no_volume_header_and_detects_semicolons()
+    {
+        var disks = Disks();
+        DiskCsvImport.Apply("Drv;Drive name;Tags\nG;Transaction logs;host cache: None, owner: DBA\n", disks);
+        Assert.Equal("Transaction logs", disks[1].DriveName);
+        Assert.Equal("host cache: None, owner: DBA", disks[1].Tags);
+    }
+
+    [Fact]
+    public void Template_round_trips_and_app_export_is_importable()
+    {
+        var source = new List<DiskConfig>
+        {
+            new() { Volume = "F:\\", Label = "Data", DriveName = "SQL data", DiskName = "vm-datadisk-00", Lun = 0, DiskNumber = 2, DeviceModel = "Msft Virtual Disk",
+                    Tier = "Azure P30", MaxIops = 5000, MaxMbps = 200, BurstIops = 0, SizeGb = 1024, CostMonthly = 106.04, Tags = "host cache: ReadOnly, owner: DBA",
+                    Notes = "Line one\nline two, with comma" }
+        };
+        var template = DiskCsvImport.BuildTemplate(source);
+        Assert.StartsWith("Volume,Label,Drive name,Disk name,LUN,Disk number", template);
+
+        var target = new List<DiskConfig> { new() { Volume = "F:\\" } };
+        var r = DiskCsvImport.Apply(template, target);
+        var t = target[0];
+        Assert.Empty(r.IgnoredColumns);
+        Assert.Equal(("Data", "SQL data", "vm-datadisk-00", 0, 2), (t.Label, t.DriveName, t.DiskName, t.Lun!.Value, t.DiskNumber!.Value));
+        Assert.Equal(("Msft Virtual Disk", "Azure P30", 5000.0, 200.0, 1024.0, 106.04), (t.DeviceModel, t.Tier, t.MaxIops, t.MaxMbps, t.SizeGb, t.CostMonthly));
+        Assert.Equal("host cache: ReadOnly, owner: DBA", t.Tags);
+        Assert.Equal("Line one line two, with comma", t.Notes);
+
+        // The Inventory "Export CSV" starts with a server column; the volume column is found by name.
+        var exported = "server,volume,label,drive_name,disk_name,lun\nSQL01,F:\\,Data,SQL data,vm-datadisk-00,0\n";
+        var blank = new List<DiskConfig> { new() { Volume = "F:\\" } };
+        DiskCsvImport.Apply(exported, blank);
+        Assert.Equal(("Data", "vm-datadisk-00", 0), (blank[0].Label, blank[0].DiskName, blank[0].Lun!.Value));
+    }
+}
+
 public class AnalyticsTests
 {
     [Fact]
