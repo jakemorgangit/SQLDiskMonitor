@@ -52,6 +52,8 @@ public class AzureDiskInfo
     public DateTime? Created { get; set; }
     public string Location { get; set; } = "";
     public double? MonthlyPrice { get; set; }
+    /// <summary>Azure resource tags on the disk.</summary>
+    public Dictionary<string, string> Tags { get; set; } = [];
     public string NextTier { get; set; } = "";
     public double? NextTierSizeGb { get; set; }
     public double? NextTierIops { get; set; }
@@ -214,69 +216,125 @@ public static class AzureSync
             MaxShares = d.MaxShares, Created = d.Created, Location = d.Location, MonthlyPrice = price,
             NextTier = next?.Name ?? "", NextTierSizeGb = next?.SizeGb,
             NextTierIops = next?.Iops, NextTierMbps = next?.Mbps, NextTierPrice = nextPrice,
-            Expandable = AzureTiers.Expandable(d), PerformanceTierChange = AzureTiers.PerformanceTierChange(d), SyncedAt = DateTime.Now
+            Expandable = AzureTiers.Expandable(d), PerformanceTierChange = AzureTiers.PerformanceTierChange(d), SyncedAt = DateTime.Now,
+            Tags = d.Tags ?? []
         };
     }
 
     /// <summary>
-    /// Suggests which volume each Azure disk backs: previous sync, the OS disk to C:, a LUN already recorded on the volume,
-    /// then an unambiguous size match (one disk, or a storage pool of equal-sized disks).
+    /// Suggests which volume each Azure disk backs, most reliable rule first:
+    /// previous sync, OS disk → C:, recorded LUN, recorded pool LUNs, a disk tag naming the volume, the volume's label or
+    /// drive name inside the disk name, a unique size, an equal-sized storage pool, then Windows disk order for disks of
+    /// the same size. The Azure temporary disk ("Temporary Storage") is never a managed disk, so it is skipped.
     /// </summary>
     public static List<DiskMatch> Suggest(IReadOnlyList<AzureDiskInfo> azure, IReadOnlyList<DiskConfig> volumes, IReadOnlyDictionary<string, double> volumeSizeGb)
     {
         var assigned = new Dictionary<string, (string Volume, string Reason)>();
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var candidates = volumes.Where(v => !v.Label.Equals("Temporary Storage", StringComparison.OrdinalIgnoreCase)).ToList();
 
+        void Assign(AzureDiskInfo a, DiskConfig v, string reason, bool exclusive = true)
+        {
+            assigned[a.Id] = (v.Volume, reason);
+            if (exclusive) used.Add(v.Volume);
+        }
+        IEnumerable<AzureDiskInfo> Free() => azure.Where(a => !assigned.ContainsKey(a.Id) && !a.IsOsDisk);
+        IEnumerable<DiskConfig> Open() => candidates.Where(v => !used.Contains(v.Volume) && v.Volume != "C:\\");
+
+        // 1. Previous sync
         foreach (var a in azure)
         {
-            var prev = volumes.FirstOrDefault(v => v.AzureDisks.Any(x => x.Id.Equals(a.Id, StringComparison.OrdinalIgnoreCase)));
-            if (prev != null) assigned[a.Id] = (prev.Volume, "previous sync");
+            var prev = candidates.FirstOrDefault(v => v.AzureDisks.Any(x => x.Id.Equals(a.Id, StringComparison.OrdinalIgnoreCase)));
+            if (prev != null) Assign(a, prev, "previous sync");
         }
-        foreach (var v in volumes.Where(v => assigned.Values.Any(x => x.Volume == v.Volume))) used.Add(v.Volume);
 
+        // 2. OS disk
         var os = azure.FirstOrDefault(a => a.IsOsDisk);
-        if (os != null && !assigned.ContainsKey(os.Id) && volumes.Any(v => v.Volume == "C:\\") && !used.Contains("C:\\"))
+        if (os != null && !assigned.ContainsKey(os.Id) && candidates.FirstOrDefault(v => v.Volume == "C:\\") is { } c && !used.Contains("C:\\"))
+            Assign(os, c, "OS disk");
+
+        // 3. Recorded LUN, 4. recorded pool LUNs
+        foreach (var a in Free().Where(a => a.Lun != null).ToList())
         {
-            assigned[os.Id] = ("C:\\", "OS disk");
-            used.Add("C:\\");
+            var byLun = Open().Where(v => v.Lun == a.Lun && v.PoolLunList.Count == 0).ToList();
+            if (byLun.Count == 1) { Assign(a, byLun[0], $"LUN {a.Lun}"); continue; }
+            var pools = candidates.Where(v => v.PoolLunList.Contains(a.Lun!.Value)).ToList();
+            if (pools.Count == 1) Assign(a, pools[0], "pool LUNs", exclusive: false);
+        }
+        foreach (var v in candidates.Where(v => v.PoolLunList.Count > 0 && assigned.Values.Any(x => x.Volume == v.Volume))) used.Add(v.Volume);
+
+        // 5. A disk tag that names the volume (drive letter, mount point, label or drive name)
+        foreach (var a in Free().Where(a => a.Tags.Count > 0).ToList())
+        {
+            var values = a.Tags.Values.Select(Norm).Where(s => s.Length > 0).ToHashSet();
+            var hits = Open().Where(v => values.Contains(Norm(v.Volume)) || values.Contains(Norm(v.Volume.TrimEnd('\\', ':')))
+                                         || (Norm(v.Label).Length >= 3 && values.Contains(Norm(v.Label)))
+                                         || (Norm(v.DriveName).Length >= 3 && values.Contains(Norm(v.DriveName)))).ToList();
+            if (hits.Count == 1) Assign(a, hits[0], "disk tag");
         }
 
-        foreach (var a in azure.Where(a => !a.IsOsDisk && a.Lun != null && !assigned.ContainsKey(a.Id)))
+        // 6. The volume's label or drive name inside the Azure disk name (TicketerLive1 must not match TicketerLive10)
+        foreach (var v in Open().ToList())
         {
-            var byLun = volumes.Where(v => v.Lun == a.Lun && !used.Contains(v.Volume)).ToList();
-            if (byLun.Count == 1)
+            foreach (var key in new[] { v.Label, v.DriveName }.Select(Norm).Where(k => k.Length >= 4).Distinct())
             {
-                assigned[a.Id] = (byLun[0].Volume, $"LUN {a.Lun}");
-                used.Add(byLun[0].Volume);
+                var hits = Free().Where(a => NameContains(Norm(a.Name), key)).ToList();
+                // The disk must not also match a different, longer volume name (e.g. "data" inside "data2").
+                if (hits.Count == 1 && !Open().Any(o => o != v && new[] { o.Label, o.DriveName }.Select(Norm)
+                        .Any(k2 => k2.Length > key.Length && NameContains(Norm(hits[0].Name), k2))))
+                {
+                    Assign(hits[0], v, "name");
+                    break;
+                }
             }
         }
 
-        // Size: a volume is slightly smaller than its disk(s). Only unambiguous matches are suggested.
+        // 7. Unique size, 8. equal-sized storage pool
         static bool Close(double volumeGb, double diskGb) => volumeGb > 0 && diskGb >= volumeGb && diskGb - volumeGb <= Math.Max(1, diskGb * 0.03);
-        var free = azure.Where(a => !assigned.ContainsKey(a.Id) && !a.IsOsDisk).ToList();
-        foreach (var v in volumes.Where(v => !used.Contains(v.Volume) && v.Volume != "C:\\"))
+        double Size(DiskConfig v) => volumeSizeGb.TryGetValue(v.Volume, out var s) ? s : 0;
+        foreach (var v in Open().ToList())
         {
-            if (!volumeSizeGb.TryGetValue(v.Volume, out var vol) || vol <= 0) continue;
-            var single = free.Where(a => Close(vol, a.SizeGb)).ToList();
-            if (single.Count == 1 && volumes.Count(o => !used.Contains(o.Volume) && volumeSizeGb.TryGetValue(o.Volume, out var s) && Close(s, single[0].SizeGb)) == 1)
+            var vol = Size(v);
+            if (vol <= 0) continue;
+            var single = Free().Where(a => Close(vol, a.SizeGb)).ToList();
+            if (single.Count == 1 && Open().Count(o => Close(Size(o), single[0].SizeGb)) == 1)
             {
-                assigned[single[0].Id] = (v.Volume, "size");
-                used.Add(v.Volume);
-                free.Remove(single[0]);
+                Assign(single[0], v, "size");
                 continue;
             }
-            // Storage pool (e.g. the SQL Server images' SQLVMDATA1): all remaining disks of one size that add up to the volume.
-            foreach (var group in free.GroupBy(a => a.SizeGb).Where(g => g.Count() > 1))
+            foreach (var group in Free().GroupBy(a => a.SizeGb).Where(g => g.Count() > 1))
             {
                 if (!Close(vol, group.Key * group.Count())) continue;
-                foreach (var a in group) assigned[a.Id] = (v.Volume, $"storage pool of {group.Count()}");
+                foreach (var a in group) Assign(a, v, $"storage pool of {group.Count()}", exclusive: false);
                 used.Add(v.Volume);
-                free.RemoveAll(a => group.Contains(a));
                 break;
             }
         }
 
+        // 9. Same-sized disks: Windows usually numbers data disks in LUN order. Only used when disk numbers are known.
+        foreach (var group in Free().Where(a => a.Lun != null).GroupBy(a => a.SizeGb).ToList())
+        {
+            var vols = Open().Where(v => v.DiskNumber != null && Close(Size(v), group.Key)).OrderBy(v => v.DiskNumber).ToList();
+            var disks = group.OrderBy(a => a.Lun).ToList();
+            if (vols.Count != disks.Count || vols.Count < 2) continue;
+            for (int i = 0; i < vols.Count; i++) Assign(disks[i], vols[i], "disk order (check)");
+        }
+
         return azure.Select(a => assigned.TryGetValue(a.Id, out var m) ? new DiskMatch(a, m.Volume, m.Reason) : new DiskMatch(a, null, "")).ToList();
+    }
+
+    private static string Norm(string? s) => new string((s ?? "").ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    /// <summary>True when <paramref name="key"/> appears in the name and isn't followed by another digit (live1 vs live10).</summary>
+    private static bool NameContains(string name, string key)
+    {
+        for (int i = name.IndexOf(key, StringComparison.Ordinal); i >= 0; i = name.IndexOf(key, i + 1, StringComparison.Ordinal))
+        {
+            int after = i + key.Length;
+            bool digitClash = char.IsDigit(key[^1]) && after < name.Length && char.IsDigit(name[after]);
+            if (!digitClash) return true;
+        }
+        return false;
     }
 
     /// <summary>

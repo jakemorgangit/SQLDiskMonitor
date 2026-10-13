@@ -224,7 +224,7 @@ public class DiskCsvImportTests
                     Notes = "Line one\nline two, with comma" }
         };
         var template = DiskCsvImport.BuildTemplate(source);
-        Assert.StartsWith("Volume,Label,Drive name,Disk name,LUN,Disk number", template);
+        Assert.StartsWith("Volume,Label,Drive name,Disk name,LUN,Pool LUNs,Disk number", template);
 
         var target = new List<DiskConfig> { new() { Volume = "F:\\" } };
         var r = DiskCsvImport.Apply(template, target);
@@ -306,6 +306,47 @@ public class AzureTests
         Assert.Equal(("G:\\", "LUN 3"), (m["vm-log"].Volume, m["vm-log"].Reason));
         Assert.All(new[] { "vm-data-0", "vm-data-1", "vm-data-2" }, n => Assert.Equal("F:\\", m[n].Volume));
         Assert.Equal(("M:\\", "size"), (m["vm-misc"].Volume, m["vm-misc"].Reason));
+    }
+
+    [Fact]
+    public void Matches_by_name_tag_pool_luns_and_disk_order()
+    {
+        var tagged = Info(Disk("azdb2-data-07", 7, 512, "P20", 2300, 150));
+        tagged.Tags = new Dictionary<string, string> { ["Drive"] = "Q:" };
+        var azure = new[]
+        {
+            Info(Disk("azdb2-os", null, 127, "P10", 500, 100, os: true)),
+            Info(Disk("AZDB2_TicketerLive1_disk", 3, 1024, "P30", 5000, 200)),
+            Info(Disk("AZDB2_TicketerLive10_disk", 4, 1024, "P30", 5000, 200)),
+            Info(Disk("azdb2-sqldata-0", 0, 1024, "P30", 5000, 200)),
+            Info(Disk("azdb2-sqldata-1", 1, 1024, "P30", 5000, 200)),
+            tagged,
+            Info(Disk("azdb2-misc-a", 10, 256, "P15", 1100, 125)),
+            Info(Disk("azdb2-misc-b", 11, 256, "P15", 1100, 125)),
+        };
+        var volumes = new List<DiskConfig>
+        {
+            new() { Volume = "C:\\" },
+            new() { Volume = "D:\\", Label = "Temporary Storage", Lun = 0 },   // Azure temp disk: never matched
+            new() { Volume = "N:\\", Label = "TicketerLive1" },
+            new() { Volume = "U:\\", Label = "TicketerLive10" },
+            new() { Volume = "F:\\", Label = "SQLVMDATA1", PoolLuns = "0,1" },
+            new() { Volume = "Q:\\", Label = "Misc" },
+            new() { Volume = "K:\\", Label = "Aux2", DiskNumber = 9 },
+            new() { Volume = "L:\\", Label = "Aux3", DiskNumber = 8 },
+        };
+        var sizes = new Dictionary<string, double> { ["K:\\"] = 255.9, ["L:\\"] = 255.9 };
+
+        var m = AzureSync.Suggest(azure, volumes, sizes).ToDictionary(x => x.Disk.Name, x => (x.Volume, x.Reason));
+        Assert.Equal(("N:\\", "name"), m["AZDB2_TicketerLive1_disk"]);
+        Assert.Equal(("U:\\", "name"), m["AZDB2_TicketerLive10_disk"]);
+        Assert.Equal(("F:\\", "pool LUNs"), m["azdb2-sqldata-0"]);
+        Assert.Equal(("F:\\", "pool LUNs"), m["azdb2-sqldata-1"]);
+        Assert.Equal(("Q:\\", "disk tag"), m["azdb2-data-07"]);
+        // Same size, no other clue: lower LUN goes to the lower Windows disk number.
+        Assert.Equal(("L:\\", "disk order (check)"), m["azdb2-misc-a"]);
+        Assert.Equal(("K:\\", "disk order (check)"), m["azdb2-misc-b"]);
+        Assert.DoesNotContain(m.Values, x => x.Volume == "D:\\");
     }
 
     [Fact]

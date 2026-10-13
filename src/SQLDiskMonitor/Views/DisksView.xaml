@@ -89,6 +89,7 @@
                         <DataGridTextColumn Header="Drive name" Binding="{Binding DriveName}" Width="Auto" MinWidth="110" />
                         <DataGridTextColumn Header="Disk name" Binding="{Binding DiskName}" Width="Auto" MinWidth="150" />
                         <DataGridTextColumn Header="LUN" Binding="{Binding Lun, TargetNullValue=''}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Pool LUNs" Binding="{Binding PoolLuns}" Width="Auto" MinWidth="70" />
                         <DataGridTextColumn Header="Disk #" Binding="{Binding DiskNumber, TargetNullValue=''}" Width="Auto" MinWidth="60" />
                         <DataGridTextColumn Header="Device / model" Binding="{Binding DeviceModel}" Width="Auto" MinWidth="60" />
                         <DataGridTextColumn Header="Tier" Binding="{Binding Tier}" Width="Auto" MinWidth="60" />
@@ -119,6 +120,13 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
                             <TextBlock Text="Detect LUNs from host" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource GhostButton}" Command="{Binding CopyLunScriptCommand}" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                            ToolTip="When remote WMI is blocked: a PowerShell script to run on the server that writes a LUN mapping CSV for Import CSV">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Copy LUN script for the server" />
                         </StackPanel>
                     </Button>
                     <TextBlock Text="{Binding DetectStatus}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="2,8,0,0"
@@ -202,6 +210,10 @@
                                     <StackPanel Style="{StaticResource Field}">
                                         <TextBlock Text="LUN" Style="{StaticResource FieldLabel}" />
                                         <TextBox Text="{Binding SelectedDisk.Lun, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Pool LUNs (storage pool)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.PoolLuns, UpdateSourceTrigger=PropertyChanged}" ToolTip="LUNs of every disk in a storage pool volume, e.g. 0,1,2" />
                                     </StackPanel>
                                     <StackPanel Style="{StaticResource Field}">
                                         <TextBlock Text="Disk number" Style="{StaticResource FieldLabel}" />
