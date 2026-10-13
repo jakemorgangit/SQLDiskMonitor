@@ -1,1 +1,9 @@
-/SQLDiskMonitor/bin/Release/net8.0-windows/win-x64/publish
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+*.msi
+*.wixpdb
+publish/

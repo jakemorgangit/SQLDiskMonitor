@@ -1,0 +1,357 @@
+<UserControl x:Class="SQLDiskMonitor.Views.DisksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:SQLDiskMonitor.Controls"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:DisksViewModel}">
+    <UserControl.Resources>
+        <Style x:Key="Field" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,16,14" />
+        </Style>
+        <Style x:Key="DiskItem" TargetType="ListBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="bd" CornerRadius="8" Padding="12,10" Margin="0,0,0,4" Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource B.SurfaceHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource B.AccentSoft}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource B.Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+            <ListBox ItemsSource="{Binding ViewModes}" SelectedItem="{Binding ViewMode}" Style="{StaticResource SegmentList}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsDetails, Converter={StaticResource BoolToVisInv}}">
+                <TextBlock Text="Unsaved changes" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,12,0"
+                           Foreground="{DynamicResource B.Warn}" Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
+                <Button Style="{StaticResource SoftButton}" Command="{Binding ExportInventoryCommand}" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xEDE1;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Export CSV" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource AccentButton}" Command="{Binding SaveAllCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Save all disks" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Inventory: every disk in one editable grid -->
+        <Border Style="{StaticResource Card}" Padding="8" DockPanel.Dock="Top" Visibility="{Binding IsDetails, Converter={StaticResource BoolToVisInv}}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Caption}" Margin="6,8,0,2"
+                           Text="Click a cell to edit. Separate tags with commas, e.g. host cache: ReadOnly, SAN: VNX-02. Save all to keep changes." />
+                <DataGrid ItemsSource="{Binding DiskList}" SelectedItem="{Binding SelectedDisk}" Style="{StaticResource Table}" IsReadOnly="False"
+                          SelectionUnit="FullRow" FrozenColumnCount="2">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" IsReadOnly="True" Width="Auto" MinWidth="60" FontWeight="SemiBold" />
+                        <DataGridTextColumn Header="Label" Binding="{Binding Label, UpdateSourceTrigger=PropertyChanged}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="LUN" Binding="{Binding Lun, TargetNullValue=''}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Disk #" Binding="{Binding DiskNumber, TargetNullValue=''}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Device / model" Binding="{Binding DeviceModel}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Tier" Binding="{Binding Tier}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Max IOPS" Binding="{Binding MaxIops}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Max MB/s" Binding="{Binding MaxMbps}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Burst IOPS" Binding="{Binding BurstIops}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Burst MB/s" Binding="{Binding BurstMbps}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Size GB" Binding="{Binding SizeGb}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Monthly cost" Binding="{Binding CostMonthly}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Tags" Binding="{Binding Tags}" Width="2*" MinWidth="220" />
+                        <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="*" MinWidth="200" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Border>
+
+    <Grid Visibility="{Binding IsDetails, Converter={StaticResource BoolToVis}}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="270" />            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Disk list -->
+        <Border Style="{StaticResource Card}" Padding="10" Margin="0,0,16,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Margin="4,10,4,4">
+                    <Button Style="{StaticResource SoftButton}" Command="{Binding DetectLunsCommand}" HorizontalAlignment="Stretch"
+                            ToolTip="Read disk numbers, LUNs and models from the SQL Server host over WMI">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Detect LUNs from host" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding DetectStatus}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="2,8,0,0"
+                               Visibility="{Binding DetectStatus, Converter={StaticResource HasValue}}" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Text="VOLUMES" Style="{StaticResource Overline}" Margin="6,4,0,10" />
+                <ListBox ItemsSource="{Binding DiskList}" SelectedItem="{Binding SelectedDisk}" Style="{StaticResource BareList}"
+                         ItemContainerStyle="{StaticResource DiskItem}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Right" Style="{StaticResource Chip}" Margin="0" Visibility="{Binding Lun, Converter={StaticResource NotNull}}">
+                                        <TextBlock FontSize="10.5" Foreground="{DynamicResource B.TextMuted}"><Run Text="LUN " /><Run Text="{Binding Lun, Mode=OneWay}" /></TextBlock>
+                                    </Border>
+                                    <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Volume, Mode=OneWay}" /> <Run Text="{Binding Label, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextMuted}" FontSize="12.5" />
+                                    </TextBlock>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Caption}" Margin="0,3,0,0">
+                                    <Run Text="{Binding Tier, Mode=OneWay}" /> <Run Text="{Binding MaxIops, StringFormat='{}{0:N0} IOPS', Mode=OneWay}" /> · <Run Text="{Binding MaxMbps, StringFormat='{}{0:N0} MB/s', Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Tags}" Style="{StaticResource Caption}" Foreground="{DynamicResource B.Accent}" Margin="0,3,0,0"
+                                           TextTrimming="CharacterEllipsis" Visibility="{Binding Tags, Converter={StaticResource HasValue}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Detail -->
+        <Grid Grid.Column="1" Visibility="{Binding SelectedDisk, Converter={StaticResource HasValue}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <DockPanel Margin="0,0,0,12">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Text="Unsaved changes" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,12,0"
+                               Foreground="{DynamicResource B.Warn}" Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
+                    <Button Style="{StaticResource AccentButton}" Command="{Binding SaveCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Save disk" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <TextBlock VerticalAlignment="Center">
+                    <Run Text="{Binding SelectedDisk.Volume, Mode=OneWay}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                    <Run Text="  " /><Run Text="{Binding SelectedDisk.Label, Mode=OneWay}" FontSize="14" Foreground="{DynamicResource B.TextMuted}" />
+                </TextBlock>
+            </DockPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,8,0">
+                        <!-- Identity -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Identity" Style="{StaticResource H2}" Margin="0,0,0,14" />
+                                <UniformGrid Columns="2">
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Label" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.Label, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="LUN" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.Lun, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Disk number" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.DiskNumber, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Device / model" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.DeviceModel, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock Text="Tags (comma separated)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding SelectedDisk.Tags, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14" />
+                                <TextBlock Text="Disk type preset" Style="{StaticResource FieldLabel}" />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SoftButton}" Content="Apply" Margin="8,0,0,0" Command="{Binding ApplyPresetCommand}" />
+                                    <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                           Text="Presets fill in the published per-disk limits. VM-level limits also apply and can cap a disk below its own rating." />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Performance -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Performance limits" Style="{StaticResource H2}" Margin="0,0,0,14" />
+                                <UniformGrid Columns="2">
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Max IOPS (baseline)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.MaxIops}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Max throughput MB/s" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.MaxMbps}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Burst IOPS" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.BurstIops}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Burst MB/s" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.BurstMbps}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Provisioned size GB" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.SizeGb}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Tier name" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.Tier, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                </UniformGrid>
+
+                                <Border Style="{StaticResource Inset}" Visibility="{Binding Observed, Converter={StaticResource HasValue}}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Overline}">
+                                            <Run Text="OBSERVED · LAST" /> <Run Text="{Binding RangeLabel, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontSize="12">
+                                                <Run Text="p95" Foreground="{DynamicResource B.TextSubtle}" /> <Run Text="{Binding Observed.P95Iops, StringFormat=N0, Mode=OneWay}" FontWeight="SemiBold" />
+                                                <Run Text=" · peak" Foreground="{DynamicResource B.TextSubtle}" /> <Run Text="{Binding Observed.PeakIops, StringFormat=N0, Mode=OneWay}" FontWeight="SemiBold" />
+                                            </TextBlock>
+                                            <TextBlock Text="IOPS" Style="{StaticResource Muted}" />
+                                        </DockPanel>
+                                        <c:MeterBar Value="{Binding Observed.P95Iops}" Maximum="{Binding SelectedDisk.MaxIops}" Burst="{Binding SelectedDisk.BurstIops}" Margin="0,5,0,10" />
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontSize="12">
+                                                <Run Text="p95" Foreground="{DynamicResource B.TextSubtle}" /> <Run Text="{Binding Observed.P95Mbps, StringFormat=N1, Mode=OneWay}" FontWeight="SemiBold" />
+                                                <Run Text=" · peak" Foreground="{DynamicResource B.TextSubtle}" /> <Run Text="{Binding Observed.PeakMbps, StringFormat=N1, Mode=OneWay}" FontWeight="SemiBold" />
+                                            </TextBlock>
+                                            <TextBlock Text="MB/s" Style="{StaticResource Muted}" />
+                                        </DockPanel>
+                                        <c:MeterBar Value="{Binding Observed.P95Mbps}" Maximum="{Binding SelectedDisk.MaxMbps}" Burst="{Binding SelectedDisk.BurstMbps}" Margin="0,5,0,10" />
+                                        <TextBlock FontSize="12" Foreground="{DynamicResource B.TextMuted}" TextWrapping="Wrap">
+                                            <Run Text="Latency read" /> <Run Text="{Binding Observed.AvgReadLatency, StringFormat=N1, Mode=OneWay}" Foreground="{DynamicResource B.Text}" /><Run Text=" ms (p95 " /><Run Text="{Binding Observed.P95ReadLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=") · write " />
+                                            <Run Text="{Binding Observed.AvgWriteLatency, StringFormat=N1, Mode=OneWay}" Foreground="{DynamicResource B.Text}" /><Run Text=" ms (p95 " /><Run Text="{Binding Observed.P95WriteLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=")" />
+                                            <LineBreak />
+                                            <Run Text="At limit" /> <Run Text="{Binding Observed.SaturatedPct, StringFormat='{}{0:N1}%', Mode=OneWay}" Foreground="{DynamicResource B.Text}" /><Run Text=" of the time · above baseline " />
+                                            <Run Text="{Binding Observed.BurstingPct, StringFormat='{}{0:N1}%', Mode=OneWay}" Foreground="{DynamicResource B.Text}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cost -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="{Binding CostsEnabled, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,14">
+                                    <TextBlock DockPanel.Dock="Right" FontSize="15" FontWeight="SemiBold">
+                                        <Run Text="{Binding Currency, Mode=OneWay}" /><Run Text="{Binding SelectedDisk.MonthlyCost, StringFormat=N2, Mode=OneWay}" /><Run Text=" / month" FontSize="12" FontWeight="Normal" Foreground="{DynamicResource B.TextMuted}" />
+                                    </TextBlock>
+                                    <TextBlock Text="Cost" Style="{StaticResource H2}" />
+                                </DockPanel>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Fixed monthly cost" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.CostMonthly}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Per GB per month" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.CostPerGb}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Per provisioned IOPS per month" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.CostPerIops}" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Per provisioned MB/s per month" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.CostPerMbps}" />
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="Use a fixed price for tiered disks (e.g. Premium SSD P30), or per-unit prices for disks billed on provisioned capacity and performance (Premium SSD v2, Ultra, gp3, io2). They add together." />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <!-- Notes -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Notes" Style="{StaticResource H2}" Margin="0,0,0,10" />
+                                <TextBlock Text="Description" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding SelectedDisk.Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                                         MinHeight="64" VerticalScrollBarVisibility="Auto" />
+                                <TextBlock Text="Change log (shown as markers on charts)" Style="{StaticResource FieldLabel}" Margin="0,14,0,4" />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SoftButton}" Margin="8,0,0,0" Command="{Binding AddNoteCommand}" Content="Add" />
+                                    <TextBox Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding AddNoteCommand}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Notes}" Margin="0,10,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1" Padding="0,8">
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="5,3" ToolTip="Delete note"
+                                                            Command="{Binding DataContext.DeleteNoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="11" />
+                                                    </Button>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Timestamp, StringFormat='ddd dd MMM yyyy HH:mm'}" Style="{StaticResource Caption}" />
+                                                        <TextBlock Text="{Binding Text}" Style="{StaticResource Body}" Margin="0,2,0,0" />
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Files -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource H2}" Margin="0,0,0,10">
+                                    <Run Text="Files on this disk" /> <Run Text="{Binding FilesOnDisk.Count, Mode=OneWay}" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" FontSize="12" />
+                                </TextBlock>
+                                <DataGrid ItemsSource="{Binding FilesOnDisk}" Style="{StaticResource Table}" MaxHeight="420">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="*" />
+                                        <DataGridTextColumn Header="File" Binding="{Binding LogicalName}" Width="*" />
+                                        <DataGridTextColumn Header="Type" Binding="{Binding TypeDesc}" Width="Auto" />
+                                        <DataGridTextColumn Header="Size MB" Binding="{Binding SizeMb, StringFormat=N0}" Width="Auto" ElementStyle="{StaticResource NumCell}" />
+                                        <DataGridTextColumn Header="Growth" Binding="{Binding GrowthDisplay}" Width="Auto" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+
+        <TextBlock Grid.Column="1" Style="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Text="Volumes appear here after the first collection from a server."
+                   Visibility="{Binding SelectedDisk, Converter={StaticResource NoValue}}" />
+    </Grid>
+    </DockPanel>
+</UserControl>

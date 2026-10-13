@@ -1,0 +1,105 @@
+<UserControl x:Class="SQLDiskMonitor.Views.CostsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:SQLDiskMonitor.Controls"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:CostsViewModel}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="{Binding HasCosts, Converter={StaticResource BoolToVisInv}}">
+                <TextBlock Style="{StaticResource Body}" Text="No costs entered yet. Add a monthly cost (or per-GB / per-IOPS prices) to each disk on the Disks page." />
+            </Border>
+
+            <UniformGrid Rows="1" Margin="0,0,-12,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                    <StackPanel>
+                        <TextBlock Text="MONTHLY STORAGE COST" Style="{StaticResource Overline}" />
+                        <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding Currency, Mode=OneWay}" /><Run Text="{Binding TotalMonthly, StringFormat=N2, Mode=OneWay}" /></TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" Text="Across all disks on this server, as entered on the Disks page" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                    <StackPanel>
+                        <TextBlock Text="PERFORMANCE USED (p95, COST-WEIGHTED)" Style="{StaticResource Overline}" />
+                        <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding AvgUtil, StringFormat=N0, Mode=OneWay}" /><Run Text="%" FontSize="14" /></TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" Text="Of provisioned IOPS / MB/s, on disks with limits set" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                    <StackPanel>
+                        <TextBlock Text="PAID-FOR HEADROOM / MONTH" Style="{StaticResource Overline}" />
+                        <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding Currency, Mode=OneWay}" /><Run Text="{Binding IdleMonthly, StringFormat=N2, Mode=OneWay}" /></TextBlock>
+                        <TextBlock Style="{StaticResource Caption}" Text="Cost of performance above the p95 workload" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Cost by disk" Style="{StaticResource H2}" Margin="0,0,0,10" />
+                    <DataGrid ItemsSource="{Binding DiskRows}" Style="{StaticResource Table}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Disk" Binding="{Binding Volume}" Width="70" />
+                            <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*" />
+                            <DataGridTextColumn Header="Tier" Binding="{Binding Tier}" Width="*" />
+                            <DataGridTemplateColumn Header="Monthly" Width="200" SortMemberPath="Monthly">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="4,0">
+                                            <c:MeterBar Value="{Binding Share}" Maximum="1" Fill="{DynamicResource B.Accent}" VerticalAlignment="Center" Margin="0,0,80,0" />
+                                            <TextBlock HorizontalAlignment="Right">
+                                                <Run Text="{Binding DataContext.Currency, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" /><Run Text="{Binding Monthly, StringFormat=N2, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Annual" Binding="{Binding Annual, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Used GB" Binding="{Binding UsedGb, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Per used GB" Binding="{Binding CostPerUsedGb, StringFormat=N3}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="p95 used %" Binding="{Binding P95Util, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Headroom cost" Binding="{Binding IdleCost, StringFormat=N2}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Per million IOs" Binding="{Binding CostPerMillionIo, StringFormat=N4}" ElementStyle="{StaticResource NumCell}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,10">
+                        <ListBox DockPanel.Dock="Right" ItemsSource="{Binding AllocationModes}" SelectedItem="{Binding Allocation}" Style="{StaticResource SegmentList}" />
+                        <StackPanel>
+                            <TextBlock Text="Cost by database" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0"
+                                       Text="Each disk's cost split across the databases on it, by space allocated or by the IO each one drives." />
+                        </StackPanel>
+                    </DockPanel>
+                    <DataGrid ItemsSource="{Binding DatabaseRows}" Style="{StaticResource Table}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Database" Binding="{Binding Database}" Width="*" />
+                            <DataGridTextColumn Header="Files" Binding="{Binding Files}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Size GB" Binding="{Binding SizeGb, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Space share" Binding="{Binding SizeShare, StringFormat=P1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="IO share" Binding="{Binding IoShare, StringFormat=P1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTemplateColumn Header="Allocated monthly cost" Width="260" SortMemberPath="Allocated">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="4,0">
+                                            <c:MeterBar Value="{Binding BarShare}" Maximum="1" Fill="{DynamicResource B.Accent}" VerticalAlignment="Center" Margin="0,0,80,0" />
+                                            <TextBlock HorizontalAlignment="Right">
+                                                <Run Text="{Binding DataContext.Currency, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}" /><Run Text="{Binding Allocated, StringFormat=N2, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

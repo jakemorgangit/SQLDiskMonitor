@@ -1,0 +1,70 @@
+<Window x:Class="SQLDiskMonitor.Views.ServerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SQL Server connection" Width="500" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource B.Surface}" Foreground="{DynamicResource B.Text}" FontFamily="{StaticResource UiFont}">
+    <StackPanel Margin="24,20,24,20">
+        <TextBlock x:Name="Heading" Text="Add SQL Server" Style="{StaticResource H1}" FontSize="19" Margin="0,0,0,16" />
+
+        <TextBlock Text="Display name" Style="{StaticResource FieldLabel}" />
+        <TextBox x:Name="NameBox" Margin="0,0,0,12" />
+
+        <TextBlock Text="Server (host, host\instance, host,port or Azure endpoint)" Style="{StaticResource FieldLabel}" />
+        <TextBox x:Name="AddressBox" Margin="0,0,0,12" />
+
+        <TextBlock Text="Authentication" Style="{StaticResource FieldLabel}" />
+        <ComboBox x:Name="AuthBox" Margin="0,0,0,12" SelectionChanged="AuthChanged">
+            <ComboBoxItem Content="Windows authentication" />
+            <ComboBoxItem Content="SQL Server authentication" />
+            <ComboBoxItem Content="Microsoft Entra integrated" />
+            <ComboBoxItem Content="Microsoft Entra password" />
+        </ComboBox>
+
+        <Grid x:Name="CredentialPanel" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Login" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="UserBox" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock x:Name="PasswordLabel" Text="Password" Style="{StaticResource FieldLabel}" />
+                <PasswordBox x:Name="PasswordBox" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Margin="0,4,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <CheckBox x:Name="EncryptBox" Content="Encrypt connection" Style="{StaticResource Switch}" Margin="0,0,0,8" />
+                <CheckBox x:Name="TrustBox" Content="Trust server certificate" Style="{StaticResource Switch}" Margin="0,0,0,8" />
+                <CheckBox x:Name="MonitorBox" Content="Collect from this server in the background" Style="{StaticResource Switch}" IsChecked="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Width="110">
+                <TextBlock Text="Timeout (s)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="TimeoutBox" Text="10" />
+            </StackPanel>
+        </Grid>
+
+        <Border x:Name="TestResultBorder" Style="{StaticResource Inset}" Margin="0,8,0,0" Visibility="Collapsed">
+            <TextBlock x:Name="TestResult" TextWrapping="Wrap" FontSize="12" />
+        </Border>
+
+        <DockPanel Margin="0,20,0,0">
+            <Button x:Name="DeleteButton" DockPanel.Dock="Left" Style="{StaticResource GhostButton}" Content="Delete server" Foreground="{DynamicResource B.Crit}"
+                    Click="Delete_Click" Visibility="Collapsed" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="TestButton" Style="{StaticResource SoftButton}" Content="Test connection" Click="Test_Click" />
+                <Button Style="{StaticResource SoftButton}" Content="Cancel" IsCancel="True" Margin="8,0,0,0" />
+                <Button Style="{StaticResource AccentButton}" Content="Save" IsDefault="True" Margin="8,0,0,0" Click="Save_Click" />
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

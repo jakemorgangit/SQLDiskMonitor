@@ -1,0 +1,89 @@
+<UserControl x:Class="SQLDiskMonitor.Views.MetricsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:oxy="http://oxyplot.org/wpf"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:MetricsViewModel}">
+    <UserControl.Resources>
+        <Style x:Key="ChartCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Margin" Value="0,0,12,12" />
+            <Setter Property="Padding" Value="6,8,6,4" />
+        </Style>
+        <Style x:Key="ToggleChip" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="bd" CornerRadius="14" Padding="10,4" BorderThickness="1" BorderBrush="{DynamicResource B.Border}" Background="{DynamicResource B.Surface}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="dot" Width="8" Height="8" Fill="{Binding Brush}" Margin="0,0,7,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource B.Text}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.45" />
+                                <Setter TargetName="dot" Property="Fill" Value="{DynamicResource B.TextSubtle}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource B.TextSubtle}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <CheckBox Style="{StaticResource Switch}" Content="Read / write split" IsChecked="{Binding SplitReadWrite}" Margin="0,0,16,0" />
+                <CheckBox Style="{StaticResource Switch}" Content="Limits" IsChecked="{Binding ShowLimits}" Margin="0,0,16,0" />
+                <CheckBox Style="{StaticResource Switch}" Content="Notes" IsChecked="{Binding ShowNotes}" Margin="0,0,16,0" />
+                <ListBox ItemsSource="{Binding GroupModes}" SelectedItem="{Binding GroupBy}" Style="{StaticResource SegmentList}" Margin="0,0,10,0" />
+                <Button Style="{StaticResource SoftButton}" Command="{Binding ExportCsvCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xEDE1;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Export CSV" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding DiskOptions}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Style="{StaticResource ToggleChip}" IsChecked="{Binding IsSelected}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Summary}" Style="{StaticResource Caption}" Margin="2,2,0,0" />
+
+        <Grid Margin="0,0,-12,0">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding IopsModel}" /></Border>
+            <Border Grid.Column="1" Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding ThroughputModel}" /></Border>
+            <Border Grid.Row="1" Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding ReadLatencyModel}" /></Border>
+            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding WriteLatencyModel}" /></Border>
+            <Border Grid.Row="2" Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding PressureModel}" /></Border>
+            <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource ChartCard}"><oxy:PlotView Model="{Binding QueueModel}" /></Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

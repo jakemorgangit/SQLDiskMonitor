@@ -1,0 +1,199 @@
+<UserControl x:Class="SQLDiskMonitor.Views.PressureView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:oxy="http://oxyplot.org/wpf"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:PressureViewModel}">
+    <UserControl.Resources>
+        <!-- One heatmap row: label column + 24 hour cells -->
+        <DataTemplate x:Key="HeatRowTemplate" DataType="{x:Type vm:HeatRow}">
+            <Grid Height="34" Margin="0,0,0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12.5" Foreground="{DynamicResource B.Text}" />
+                    <TextBlock Text="{Binding Sublabel}" Style="{StaticResource Caption}" Visibility="{Binding Sublabel, Converter={StaticResource HasValue}}" />
+                </StackPanel>
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:HeatCell}">
+                            <Border Background="{Binding Fill}" CornerRadius="4" Margin="1.5,0" ToolTip="{Binding Tip}">
+                                <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}" FontSize="10.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="HourAxis">
+            <Grid Margin="0,2,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding DataContext.Hours, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </DataTemplate>
+
+        <Style x:Key="LegendSwatch" TargetType="Border">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Margin" Value="12,0,5,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Style="{StaticResource Muted}" Margin="2,0,0,12" Visibility="{Binding HasData, Converter={StaticResource BoolToVisInv}}"
+                       Text="No samples in this range yet." />
+
+            <!-- Disk × hour heatmap -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,4">
+                        <ListBox DockPanel.Dock="Right" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" Style="{StaticResource SegmentList}" VerticalAlignment="Top" />
+                        <StackPanel>
+                            <TextBlock Text="Pressure by hour of day" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0"
+                                       Text="Each cell is a disk's pressure score for that hour, across the whole selected period. Hover for IOPS and latency." />
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,14">
+                        <Border Style="{StaticResource LegendSwatch}" Margin="0,0,5,0" Background="{DynamicResource B.Good}" /><TextBlock Text="Healthy &lt;40" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource LegendSwatch}" Background="{DynamicResource B.Warn}" /><TextBlock Text="Elevated 40–70" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource LegendSwatch}" Background="{DynamicResource B.High}" /><TextBlock Text="High 70–90" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource LegendSwatch}" Background="{DynamicResource B.Crit}" /><TextBlock Text="Critical 90+" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding HourRows}" ItemTemplate="{StaticResource HeatRowTemplate}" />
+                    <ContentControl ContentTemplate="{StaticResource HourAxis}" Content="{Binding}" />
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Week × hour for one disk -->
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,12">
+                            <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding Volumes}" SelectedItem="{Binding SelectedVolume}" MinWidth="110" />
+                            <StackPanel>
+                                <TextBlock Text="Weekly pattern" Style="{StaticResource H2}" />
+                                <TextBlock Text="Day of week × hour for one disk" Style="{StaticResource Muted}" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding WeekRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:HeatRow}">
+                                    <Grid Height="26" Margin="0,0,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="1" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:HeatCell}">
+                                                    <Border Background="{Binding Fill}" CornerRadius="3" Margin="1,0" ToolTip="{Binding Tip}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <UniformGrid Columns="4" Margin="41,4,0,0">
+                            <TextBlock Text="00:00" Style="{StaticResource Caption}" />
+                            <TextBlock Text="06:00" Style="{StaticResource Caption}" />
+                            <TextBlock Text="12:00" Style="{StaticResource Caption}" />
+                            <TextBlock Text="18:00" Style="{StaticResource Caption}" />
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Explanation -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="6,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="How the pressure score works" Style="{StaticResource H2}" Margin="0,0,0,10" />
+                        <TextBlock Style="{StaticResource Body}" Foreground="{DynamicResource B.TextMuted}" LineHeight="20">
+                            The score runs from 0 to 100 and shows how hard SQL Server is pushing a disk. It is not a hardware health check.
+                            <LineBreak /><LineBreak />
+                            <Run Text="Capacity" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />: IOPS and MB/s as a percentage of the limits you set on the Disks page. Whichever is higher counts.
+                            <LineBreak />
+                            <Run Text="Latency" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />: read and write latency scored against your thresholds. Log volumes use the stricter log-write targets.
+                            <LineBreak /><LineBreak />
+                            The score is the higher of the two. A disk is under pressure if it is near its provisioned limit or if IOs are queuing. Latency is ignored when there are only a few IOs per second.
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Timeline -->
+            <Border Style="{StaticResource Card}" Height="300" Padding="6,8,6,4" Margin="0,0,0,12">
+                <oxy:PlotView Model="{Binding Timeline}" />
+            </Border>
+
+            <!-- Per-disk summary -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Disk summary" Style="{StaticResource H2}" Margin="0,0,0,10" />
+                    <DataGrid ItemsSource="{Binding Stats}" Style="{StaticResource Table}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Disk" Binding="{Binding Volume}" Width="*" />
+                            <DataGridTextColumn Header="Label" Binding="{Binding Config.Label}" Width="*" />
+                            <DataGridTemplateColumn Header="p95 pressure" Width="110" SortMemberPath="P95Pressure">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="4,0">
+                                            <Ellipse Width="8" Height="8" Fill="{Binding P95Pressure, Converter={StaticResource PressureBrush}}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding P95Pressure, StringFormat=N0}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Avg" Binding="{Binding AvgPressure, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Peak" Binding="{Binding PeakPressure, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="At limit %" Binding="{Binding SaturatedPct, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Bursting %" Binding="{Binding BurstingPct, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="p95 IOPS" Binding="{Binding P95Iops, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="p95 MB/s" Binding="{Binding P95Mbps, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Read ms" Binding="{Binding AvgReadLatency, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Write ms" Binding="{Binding AvgWriteLatency, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Busiest hour" Binding="{Binding PeakHour, StringFormat='{}{0:00}:00'}" ElementStyle="{StaticResource NumCell}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

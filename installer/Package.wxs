@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Per-machine MSI. MajorUpgrade lets a newer MSI (including the in-app updater's) replace any older version in place. -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="SQL Disk Monitor"
+           Manufacturer="Blackcat Data Solutions Ltd"
+           Version="$(var.Version)"
+           UpgradeCode="{A361E9AA-4557-44A4-BCBE-575FAFA3579F}"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon.exe" SourceFile="$(var.PublishDir)SQLDiskMonitor.exe" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.exe" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/jakemorgangit/SQLDiskMonitor" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/jakemorgangit/SQLDiskMonitor/issues" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SQL Disk Monitor" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="SQL Disk Monitor">
+      <Component Id="AppExe" Directory="INSTALLFOLDER">
+        <File Id="AppExeFile" Source="$(var.PublishDir)SQLDiskMonitor.exe" KeyPath="yes">
+          <Shortcut Id="AppShortcut" Directory="ProgramMenuFolder" Name="SQL Disk Monitor"
+                    Description="SQL Server storage pressure, space and cost" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon.exe" Advertise="yes" />
+        </File>
+      </Component>
+    </Feature>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <!-- Installer UI: choose folder, then offer to launch on the last page. -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch SQL Disk Monitor" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#AppExeFile]" />
+    <CustomAction Id="LaunchApplication" DllEntry="WixShellExec" Impersonate="yes" BinaryRef="Wix4UtilCA_X86" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
+  </Package>
+</Wix>

@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>SQLDiskMonitor</AssemblyName>
+    <RootNamespace>SQLDiskMonitor</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- Fluent ThemeMode is flagged experimental; we rely on it for light/dark switching -->
+    <NoWarn>$(NoWarn);WPF0001;MVVMTK0045</NoWarn>
+
+    <AssemblyTitle>SQL Disk Monitor</AssemblyTitle>
+    <Product>SQL Disk Monitor</Product>
+    <Company>Blackcat Data Solutions Ltd</Company>
+    <Authors>Jake Morgan</Authors>
+    <Copyright>© 2026 Blackcat Data Solutions Ltd</Copyright>
+    <Description>SQL Server storage performance, pressure and cost analysis. https://blackcat.wales</Description>
+    <Version>2.0.0</Version>
+
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is only used for the tray icon; keep its namespace out of the global usings -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

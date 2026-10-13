@@ -1,110 +1,142 @@
 # SQL Disk Monitor
 
-Real-time disk I/O performance monitoring for SQL Server. Tracks read/write latency, IOPS, and throughput across all database files with live charts.
+A Windows desktop tool for DBAs that shows how hard SQL Server is working its storage: which disk every database file is on, how close each disk is to its provisioned IOPS and throughput, when in the day the pressure builds, how fast space is running out, and what the storage costs.
+
+![Overview](docs/screenshots/dark-overview.png)
 
 ---
 
-## Features
+## What it does
 
-- **Six live charts** in a 3×2 grid - Avg Read/Write Latency (ms), Read/Write IOPS, Read/Write Throughput (MB/s)
-- **Configurable capture interval** - from 1 second to 5 minutes via slider
-- **Saved connections** - stored securely in Windows Credential Manager with support for Windows Auth and SQL Auth
-- **Grouping modes** - view data grouped by Database, Drive, or individual File
-- **Interactive legend** - click to show/hide series, expand/collapse database file groups
-- **Hover tooltips** - dark-themed tracker that follows the cursor across data points
-- **Session save/load** - export to JSON, reload later with a date/time range filter
-- **CSV export** - full delta data for offline analysis
-- **Chart image export** - save the current chart view as PNG
-- **Diagnostic dump** - Ctrl+D captures a raw before/after snapshot to verify physical I/O activity
-- **Dark theme** - sleek navy/blue interface styled for long monitoring sessions
-- **Standalone exe** - single-file self-contained deployment, no runtime install required
+**Disk inventory**
+- Maps every database file to the volume it lives on (drive letters and mount points), with size, used space inside the file, growth settings and max size.
+- Tag each disk by hand with a label, **LUN**, disk number, device model, tier, **max IOPS, max MB/s, burst IOPS and burst MB/s**, provisioned size, cost and free-form **tags** (for example `host cache: ReadOnly, SAN: Pure-02, owner: DBA`).
+- LUNs and tags appear as chips on every disk card. The **Inventory** view on the Disks page lists every disk in one editable grid, with a CSV export.
+- **Presets** fill in the published limits for Azure Premium SSD P1–P80 (including credit-based burst), Premium SSD v2, Ultra, AWS gp3/io2/st1 and GCP Hyperdisk.
+- **Detect LUNs from host** reads disk numbers, SCSI LUNs and models from the SQL Server host over WMI.
+- **Notes**: a free-text description per disk, plus a timestamped change log ("upgraded to P40", "added tempdb files") that appears as markers on the charts.
 
-## Screenshot
+**Disk pressure score**
+- A 0–100 score per disk per sample. It measures how hard SQL Server is pushing the disk, not hardware health:
+  - **Capacity**: IOPS and MB/s as a percentage of the limits you set. Whichever is higher counts.
+  - **Latency**: read and write latency scored against configurable good / warning / critical thresholds. Volumes that mostly take log writes use stricter log thresholds. Latency is ignored when there are too few IOs per second to be meaningful.
+  - **Pressure** = the higher of the two. Bands: Healthy < 40, Elevated 40–70, High 70–90, Critical 90+.
+- A **heatmap by hour of day** for every disk, and a **day-of-week × hour** heatmap for one disk, show when the pressure happens (average or peak).
 
-![SQL Disk Monitor](https://blackcat.wales/assets/img/SQLDiskMonitor.gif)
+**Metrics**
+- IOPS, throughput, read and write latency, pressure and pending IO over 15 minutes to 30 days, grouped by disk or by database.
+- Max and burst limits drawn on the charts, an optional read/write split, and note markers.
+- CSV export.
+
+**Space**
+- Total, used and free space per disk, with used space over time.
+- A growth trend in GB/day and a **days-until-full** forecast for each disk.
+- Allocated vs used space for each database and file (checked every 15 minutes), with growth per day and autogrowth event counts.
+
+**Bottlenecks**
+- Ranked findings with recommendations:
+  - disks at their IOPS or throughput cap, or living on burst credits
+  - high read latency, or high log-write latency
+  - a single file causing most of a disk's IO wait
+  - disks running out of space, with a fill-date forecast
+  - frequent autogrowth and percentage autogrowth
+  - data and log files sharing a disk, and tempdb sharing a disk with user databases
+  - WRITELOG and PAGEIOLATCH waits
+  - disks with limits not yet configured
+  - over-provisioned disks, with a smaller preset suggested
+- **Export HTML report**: a self-contained report for change requests or the infrastructure team.
+
+**Costs (optional)**
+- Turn on in Settings. Enter a fixed monthly price, or per-GB / per-IOPS / per-MB/s prices for disks billed on provisioned capacity.
+- Shows cost per disk, cost per used GB, cost per million IOs, the cost of headroom above the p95 workload, and each disk's cost split across its databases by space or by IO.
+
+**App**
+- Dark and light themes (or follow Windows), using WPF's Fluent styling.
+- Monitors several servers at once in the background. Minimises to the notification area, and can start with Windows.
+- Installs from an MSI. It checks GitHub for new releases at startup and can download and install an update in place.
+- **Demo server**: a week of realistic synthetic data, to explore the app without connecting to anything.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Pressure](docs/screenshots/dark-pressure.png) **Pressure heatmaps** | ![Metrics](docs/screenshots/light-metrics.png) **Metrics with limits and notes** |
+| ![Space](docs/screenshots/dark-space.png) **Space and growth** | ![Disks](docs/screenshots/dark-disks.png) **Disk limits, LUN, cost and notes** |
+| ![Bottlenecks](docs/screenshots/dark-bottlenecks.png) **Bottlenecks** | ![Costs](docs/screenshots/dark-costs.png) **Costs** |
+| ![Inventory](docs/screenshots/dark-inventory.png) **Disk inventory, editable in place** | ![Files](docs/screenshots/dark-files.png) **Files** |
+| ![Light theme](docs/screenshots/light-overview.png) **Light theme** | ![Light pressure](docs/screenshots/light-pressure.png) **Light theme heatmaps** |
+
+## Install
+
+1. Download `SQLDiskMonitor-x.y.z.msi` from [Releases](../../releases).
+2. Run it. It installs per machine to `Program Files\SQL Disk Monitor` and adds a Start menu shortcut.
+3. When a new release is published, the app shows an update banner. **Download & install** runs the new MSI, which upgrades in place, and then restarts the app. You can turn the check off, or skip a version, in Settings.
+
+The app is self-contained, so no .NET runtime install is needed.
 
 ## Requirements
 
-- **OS:** Windows 10/11 (x64)
-- **Target:** SQL Server 2016+ (uses `sys.dm_io_virtual_file_stats` and `sys.master_files`)
-- **Permissions:** `VIEW SERVER STATE` on the target SQL Server instance
+- Windows 10 or 11, x64.
+- SQL Server 2016 or later (on-premises, VM or Azure SQL Managed Instance).
+- A login with **VIEW SERVER STATE**. Used-space figures also need access to each database; databases the login can't enter are skipped.
+- **Detect LUNs** needs remote WMI access to the SQL Server host, which normally means local admin. Without it, enter LUNs by hand.
+- Authentication: Windows, SQL login, Microsoft Entra integrated or Entra password. Passwords are stored in Windows Credential Manager.
 
-No .NET runtime installation is needed - the published exe is fully self-contained.
+## Getting started
 
-## Download
-
-Grab the latest `SQLDiskMonitor.exe` from the [Releases](../../releases) page.
-
-## Build from Source
-
-Prerequisites: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-
-```bash
-cd SQLDiskMonitor
-dotnet publish -c Release -r win-x64 --self-contained \
-  -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true
-```
-
-The output exe will be in `bin/Release/net8.0-windows/win-x64/publish/`.
-
-## Usage
-
-1. **Launch** `SQLDiskMonitor.exe`
-2. **Add a server** - click "+ Add Server" in the left sidebar, enter connection details, and save
-3. **Connect** - double-click a saved server (or right-click → Connect)
-4. **Set the interval** - drag the slider to choose capture frequency (1s–5min)
-5. **Start capturing** - click the green **Start** button (or press F5)
-6. **Filter** - use the Drive, DB, and Group dropdowns to focus the view
-7. **Toggle series** - click legend items to show/hide individual databases, drives, or files
-8. **Stop** - click **Stop** (or press F6)
-
-### Keyboard Shortcuts
+1. **Add a SQL Server** in the side bar, or choose **Explore with demo data**.
+2. Collection starts straight away. The first figures appear after one interval (15 seconds by default).
+3. On **Disks**, pick a preset or enter max IOPS, MB/s and burst limits for each disk, plus LUN, tags, cost and notes. Use **Inventory** to fill in every disk in one grid. Without limits, pressure is based on latency only.
+4. Use **Pressure**, **Space** and **Bottlenecks** with a 24-hour or 7-day range to see when and where the disks struggle.
 
 | Key | Action |
 |---|---|
-| F5 | Start capture |
-| F6 | Stop capture |
-| Ctrl+S | Save session to JSON |
-| Ctrl+O | Load session from JSON |
-| Ctrl+D | Diagnostic dump |
+| F5 | Refresh the current page |
 
-### Connection Options
+## How it works
 
-| Option | Description |
+On each interval the collector runs one lightweight query against:
+
+| DMV | Used for |
 |---|---|
-| Windows Auth | Uses the current Windows identity (Kerberos/NTLM) |
-| SQL Auth | Username/password - password stored in Windows Credential Manager |
-| Trust Certificate | Skips TLS certificate validation (useful for self-signed certs) |
-| Encrypt | Forces TLS encryption on the connection |
-| Timeout | Connection timeout in seconds (default 10) |
+| `sys.dm_io_virtual_file_stats` | Cumulative reads, writes, bytes and IO stall per file |
+| `sys.master_files` | File names, types, sizes and growth settings |
+| `sys.dm_os_volume_stats` | Volume mount point, label, total and free bytes |
+| `sys.dm_io_pending_io_requests` | IOs currently outstanding per file |
+| `sys.dm_os_wait_stats` | IO-related waits (PAGEIOLATCH, WRITELOG, IO_COMPLETION…) |
 
-## How It Works
+Differences between successive snapshots give IOPS, MB/s and average latency (stall ÷ IOs) per file. These are added up per volume and scored. Every 15 minutes, `FILEPROPERTY(name, 'SpaceUsed')` is read in each accessible database for used space.
 
-On each capture tick the tool queries `sys.dm_io_virtual_file_stats` joined to `sys.master_files` to get cumulative I/O counters for every database file. It computes deltas between consecutive snapshots to derive:
+These are SQL Server's own IO figures. Reads served from the buffer pool don't appear, and IO from other processes on the same disk isn't counted. Cloud disks are also capped by the VM's own IOPS and throughput limits, which can be lower than a single disk's rating.
 
-| Metric | Calculation |
-|---|---|
-| Avg Read Latency (ms) | Δ `io_stall_read_ms` / Δ `num_of_reads` |
-| Avg Write Latency (ms) | Δ `io_stall_write_ms` / Δ `num_of_writes` |
-| Read IOPS | Δ `num_of_reads` / elapsed seconds |
-| Write IOPS | Δ `num_of_writes` / elapsed seconds |
-| Read Throughput (MB/s) | Δ `num_of_bytes_read` / 1 048 576 / elapsed seconds |
-| Write Throughput (MB/s) | Δ `num_of_bytes_written` / 1 048 576 / elapsed seconds |
+History is kept in a local SQLite database at `%LOCALAPPDATA%\SQLDiskMonitor\history.db`: 30 days of disk samples and 7 days of per-file samples by default. Nothing is installed on, or written to, the SQL Server. The only outbound call the app makes is the GitHub release check.
 
-These are **physical I/O** metrics. Reads served entirely from the buffer cache will show as zero - this is expected and healthy. If you need to force physical reads for testing, run `DBCC DROPCLEANBUFFERS` (not recommended on production).
+## Build from source
 
-## Tech Stack
+Prerequisites: the [.NET 10 SDK](https://dotnet.microsoft.com/download). The WiX toolset is restored from NuGet.
 
-- .NET 8 / WPF
-- [OxyPlot](https://oxyplot.github.io/) for charting
-- [Microsoft.Data.SqlClient](https://github.com/dotnet/SqlClient) for SQL Server connectivity
-- Windows Credential Manager (P/Invoke to `advapi32.dll`) for secure credential storage
+```bash
+dotnet test tests/SQLDiskMonitor.Tests
+pwsh build/build.ps1 -Version 2.0.0        # self-contained exe + MSI into ./artifacts
+pwsh build/screenshots.ps1                 # regenerate docs/screenshots from the demo server
+```
+
+The integration test runs against a real instance when `SQLDM_TEST_SERVER` is set (for example `.\SQLEXPRESS`).
+
+Build from a short path such as `C:\src\SQLDiskMonitor`. Windows Installer and WPF's native libraries fail when the path is very long.
+
+### Releasing
+
+Push a tag like `v2.1.0`. The **Release** workflow tests, builds the MSI and publishes a GitHub release. Installed copies pick it up at their next start.
+
+## Tech stack
+
+.NET 10 · WPF with the Fluent theme · CommunityToolkit.Mvvm · OxyPlot · Microsoft.Data.SqlClient · SQLite · WiX 5
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
 
 ## Author
 
-**Jake Morgan** - [Blackcat Data Solutions Ltd](https://blackcat.wales)
+**Jake Morgan**, [Blackcat Data Solutions Ltd](https://blackcat.wales)
