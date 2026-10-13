@@ -203,7 +203,14 @@ public partial class MainViewModel : ObservableObject
         }
         var s = new ServerConnection { Name = "Demo SQL Server", Address = "demo", Monitor = true };
         Store.SaveServer(s);
-        foreach (var d in DemoSource.DemoDisks(s.Id)) Store.SaveDisk(d);
+        var (azureVm, azureDisks) = DemoSource.DemoAzure();
+        s.Azure = azureVm;
+        Store.SaveServer(s);
+        foreach (var d in DemoSource.DemoDisks(s.Id))
+        {
+            d.AzureDisks = azureDisks.GetValueOrDefault(d.Volume) ?? [];
+            Store.SaveDisk(d);
+        }
         Store.AddNote(new DiskNote { ServerId = s.Id, Volume = "D:\\", Timestamp = DateTime.Today.AddDays(-2).AddHours(9.5), Text = "Rebuilt Warehouse clustered index" });
         Store.AddNote(new DiskNote { ServerId = s.Id, Volume = "T:\\", Timestamp = DateTime.Today.AddDays(-4).AddHours(14), Text = "Added 3 tempdb data files" });
 

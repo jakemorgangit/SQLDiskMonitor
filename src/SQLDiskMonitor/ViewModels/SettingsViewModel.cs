@@ -66,6 +66,9 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
         LogGood = s.LogLatencyGood; LogWarn = s.LogLatencyWarn; LogCrit = s.LogLatencyCritical;
         MinIops = s.MinIopsForLatency; Saturation = s.SaturationPct;
         SpaceInHealth = s.SpaceInHealth; CountFileFreeSpace = s.CountFileFreeSpace; SpaceWarnPct = s.SpaceWarnPct;
+        AzureAuthMode = s.AzureAuth == "AzureCli" ? AzureAuthModes[1] : AzureAuthModes[0];
+        AzureTenant = s.AzureTenantId;
+        ShowAzureStatus();
         StorageInfo = $"History database: {Store.DatabaseSizeBytes() / 1048576.0:N1} MB";
         _loading = false;
     }
@@ -110,6 +113,7 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
         s.SpaceInHealth = SpaceInHealth;
         s.CountFileFreeSpace = CountFileFreeSpace;
         s.SpaceWarnPct = Math.Clamp(SpaceWarnPct, 1, 50);
+        ApplyAzureSettings();
         s.Save();
         ApplyStartup(s.StartWithWindows);
         Shell.Costs.IsVisible = s.CostsEnabled;
@@ -125,6 +129,46 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
         if (key == null) return;
         if (enabled) key.SetValue("SQLDiskMonitor", $"\"{Environment.ProcessPath}\" --minimized");
         else key.DeleteValue("SQLDiskMonitor", false);
+    }
+
+    // ───────── Azure ─────────
+    public IReadOnlyList<string> AzureAuthModes { get; } = ["Browser sign-in", "Azure CLI (az login)"];
+    [ObservableProperty] private string _azureAuthMode = "Browser sign-in";
+    [ObservableProperty] private string _azureTenant = "";
+    [ObservableProperty] private string _azureStatus = "";
+
+    private void ApplyAzureSettings()
+    {
+        Cfg.AzureAuth = AzureAuthMode.StartsWith("Azure CLI") ? "AzureCli" : "Browser";
+        Cfg.AzureTenantId = AzureTenant.Trim();
+    }
+
+    private void ShowAzureStatus() =>
+        AzureStatus = Cfg.AzureAuth == "AzureCli" ? "Uses your az login"
+            : Services.Azure.AzureClient.SignedInAccount() is { } a ? $"Signed in as {a}" : "Not signed in";
+
+    [RelayCommand]
+    private async Task SignInAzure()
+    {
+        ApplyAzureSettings();
+        Cfg.Save();
+        AzureStatus = "Signing in…";
+        try
+        {
+            var who = await new Services.Azure.AzureClient(Cfg).SignInAsync();
+            AzureStatus = $"Signed in as {who}";
+        }
+        catch (Exception ex)
+        {
+            AzureStatus = Cfg.AzureAuth == "AzureCli" ? $"Azure CLI not signed in. Run az login first. ({ex.Message})" : $"Sign-in failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void SignOutAzure()
+    {
+        Services.Azure.AzureClient.SignOut();
+        ShowAzureStatus();
     }
 
     [RelayCommand]

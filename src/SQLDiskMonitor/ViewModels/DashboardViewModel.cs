@@ -85,6 +85,9 @@ public partial class DashboardViewModel(MainViewModel shell) : PageViewModel(she
         }
     }
 
+    public string VmIopsCap => Server?.Azure?.MaxIops is { } i ? $"VM limit {i:N0}" : "";
+    public string VmMbpsCap => Server?.Azure?.MaxMbps is { } m ? $"VM limit {m:N0} MB/s" : "";
+
     public bool CostsEnabled => Cfg.CostsEnabled;
     public string Currency => Cfg.CurrencySymbol;
 
@@ -92,6 +95,8 @@ public partial class DashboardViewModel(MainViewModel shell) : PageViewModel(she
     {
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(CostsEnabled));
+        OnPropertyChanged(nameof(VmIopsCap));
+        OnPropertyChanged(nameof(VmMbpsCap));
         OnPropertyChanged(nameof(Currency));
         HasServer = Server != null;
         if (Server == null) { Cards.Clear(); TopFindings.Clear(); return; }

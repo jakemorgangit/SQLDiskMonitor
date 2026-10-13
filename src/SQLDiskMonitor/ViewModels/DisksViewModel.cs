@@ -42,11 +42,11 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
         OnPropertyChanged(nameof(CostsEnabled));
         OnPropertyChanged(nameof(Currency));
         OnPropertyChanged(nameof(RangeLabel));
+        OnPropertyChanged(nameof(AzureVmText));
         if (Server == null) { DiskList.Clear(); return; }
         var server = Server;
         var gen = ++Generation;
         var keep = PendingVolume ?? SelectedDisk?.Volume;
-        PendingVolume = null;
 
         var (disks, files, analysis) = await Task.Run(() =>
             (Store.GetDisks(server.Id), Store.GetFiles(server.Id), Analytics.Analyse(Store, server.Id, Shell.RangeFrom, Shell.RangeTo, Cfg)));
@@ -62,6 +62,8 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
             DiskList.Add(d);
         }
         SelectedDisk = DiskList.FirstOrDefault(d => d.Volume == keep) ?? DiskList.FirstOrDefault();
+        // Cleared only once applied, so an overlapping refresh can't lose the requested disk.
+        PendingVolume = null;
         IsDirty = false;
     }
 
@@ -110,6 +112,35 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
         IsDirty = false;
         Shell.ShowToast("Saved all disks");
     }
+
+    [RelayCommand]
+    private async Task SyncAzure()
+    {
+        if (Server == null || DiskList.Count == 0) { Shell.ShowToast("No disks yet. Collect from the server first."); return; }
+        if (Server.IsDemo) { Shell.ShowToast("Azure sync isn't available for the demo server."); return; }
+        if (IsDirty) SaveAll();
+
+        // Current volume sizes from recent samples help match Azure disks to volumes by size.
+        var server = Server;
+        var sizes = await Task.Run(() => Store.GetVolumeSeries(server.Id, DateTime.Now.AddDays(-2), DateTime.Now, 3600)
+            .GroupBy(s => s.Volume).ToDictionary(g => g.Key, g => g.OrderBy(s => s.Timestamp).Last().TotalGb));
+        foreach (var d in DiskList) if (!sizes.ContainsKey(d.Volume) && d.SizeGb > 0) sizes[d.Volume] = d.SizeGb;
+
+        var vm = new AzureSyncViewModel(Store, Cfg, server, DiskList, sizes);
+        var win = new Views.AzureSyncWindow(vm) { Owner = System.Windows.Application.Current.MainWindow };
+        if (win.ShowDialog() == true)
+        {
+            Shell.ShowToast($"Updated {vm.ChangedVolumes} volume(s) from Azure VM {server.Azure?.Name}");
+            await RefreshAsync();
+        }
+    }
+
+    public string AzureVmText => Server?.Azure is { } a
+        ? $"{a.Name} · {a.VmSize} · VM disk limit {a.CapText} · {a.SlotsText} · synced {a.SyncedAt:dd MMM HH:mm}" : "";
+
+    [RelayCommand]
+    private void OpenInPortal(Services.Azure.AzureDiskInfo disk) =>
+        MainViewModel.OpenUrl($"https://portal.azure.com/#@/resource{disk.Id}");
 
     [RelayCommand]
     private void SaveCsvTemplate()

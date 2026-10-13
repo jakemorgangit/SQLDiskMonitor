@@ -197,6 +197,28 @@ public class DemoSource : ISnapshotSource
     private static double Bell(double x, double mu, double sigma) => Math.Exp(-Math.Pow(x - mu, 2) / (2 * sigma * sigma));
 
 
+    /// <summary>A simulated Azure VM and managed disks for the demo server, so the Azure panel and VM limit show.</summary>
+    public static (Azure.AzureVmLink Vm, Dictionary<string, List<Azure.AzureDiskInfo>> Disks) DemoAzure()
+    {
+        const string rg = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-sql-prod/providers/Microsoft.Compute";
+        Azure.AzureDiskInfo Disk(string name, int? lun, double size, string tier, double iops, double mbps, string caching, double price, double? next, bool os = false) =>
+            Azure.AzureSync.ToInfo(new Azure.AzureDisk($"{rg}/disks/{name}", name, lun, os, caching, false, size, "Premium_LRS", tier, iops, mbps, false, "uksouth",
+                Zone: "1", Encryption: "EncryptionAtRestWithPlatformKey", NetworkAccess: "AllowAll", Created: new DateTime(2025, 3, 14)), price, next);
+        var vm = new Azure.AzureVmLink
+        {
+            VmId = $"{rg}/virtualMachines/sqlprod01", Name = "sqlprod01", ResourceGroup = "rg-sql-prod", SubscriptionName = "Demo subscription",
+            Location = "uksouth", ComputerName = "DEMO-SQL01", VmSize = "Standard_E8ds_v5", MaxIops = 12800, MaxMbps = 290, MaxDataDisks = 16,
+            DataDisksAttached = 3, SyncedAt = DateTime.Now.AddHours(-3)
+        };
+        return (vm, new Dictionary<string, List<Azure.AzureDiskInfo>>
+        {
+            ["C:\\"] = [Disk("sqlprod01-osdisk", null, 127, "P10", 500, 100, "ReadWrite", 15.43, 29.79, os: true)],
+            ["D:\\"] = [Disk("sqlprod01-datadisk-00", 0, 1024, "P30", 5000, 200, "ReadOnly", 106.04, 203.01)],
+            ["L:\\"] = [Disk("sqlprod01-logdisk-00", 1, 512, "P20", 2300, 150, "None", 56.20, 106.04)],
+            ["T:\\"] = [Disk("sqlprod01-tempdbdisk-00", 2, 128, "P10", 500, 100, "ReadOnly", 15.43, 29.79)],
+        });
+    }
+
     /// <summary>Disk definitions for the demo server so capacity and cost analysis light up immediately.</summary>
     public static IEnumerable<Models.DiskConfig> DemoDisks(long serverId) =>
     [

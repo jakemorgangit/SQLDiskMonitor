@@ -37,6 +37,13 @@
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <ListBox ItemsSource="{Binding ViewModes}" SelectedItem="{Binding ViewMode}" Style="{StaticResource SegmentList}" />
+            <Button DockPanel.Dock="Right" Style="{StaticResource SoftButton}" Command="{Binding SyncAzureCommand}" Margin="8,0,0,0"
+                    ToolTip="Read disk names, LUNs, tiers, limits, sizes and prices from the Azure VM (read-only)">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE753;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Sync from Azure" />
+                </StackPanel>
+            </Button>
             <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Command="{Binding SaveCsvTemplateCommand}" Margin="8,0,0,0"
                     ToolTip="Save a CSV with the column headers the import understands, one row per volume">
                 <StackPanel Orientation="Horizontal">
@@ -315,6 +322,69 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <!-- Azure (read-only, from the last sync) -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="{Binding SelectedDisk.HasAzure, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock DockPanel.Dock="Right" Text="&#xE753;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource B.Accent}" FontSize="16" />
+                                    <TextBlock Text="Azure" Style="{StaticResource H2}" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding AzureVmText}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <ItemsControl ItemsSource="{Binding SelectedDisk.AzureDisks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource Inset}" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="110" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.Resources>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                                            <Setter Property="FontSize" Value="12.5" />
+                                                            <Setter Property="Margin" Value="0,2" />
+                                                        </Style>
+                                                    </Grid.Resources>
+                                                    <DockPanel Grid.ColumnSpan="2" Margin="0,0,0,6">
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="6,2" ToolTip="Open in the Azure portal"
+                                                                Command="{Binding DataContext.OpenInPortalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                                            <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="12" />
+                                                        </Button>
+                                                        <TextBlock FontWeight="SemiBold" FontSize="13.5" TextTrimming="CharacterEllipsis">
+                                                            <Run Text="{Binding Name, Mode=OneWay}" /> <Run Text="{Binding LunText, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextMuted}" FontSize="12" />
+                                                        </TextBlock>
+                                                    </DockPanel>
+                                                    <TextBlock Grid.Row="1" Text="Type" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SkuText}" />
+                                                    <TextBlock Grid.Row="2" Text="Tier" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TierText}" />
+                                                    <TextBlock Grid.Row="3" Text="Size" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="3" Grid.Column="1">
+                                                        <Run Text="{Binding SizeText, Mode=OneWay}" /><Run Text="{Binding MonthlyPrice, StringFormat='{} · {0:N2}/month', Mode=OneWay}" Foreground="{DynamicResource B.TextMuted}" />
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Row="4" Text="Performance" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding LimitsText}" />
+                                                    <TextBlock Grid.Row="5" Text="Next size up" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding NextTierText}" />
+                                                    <TextBlock Grid.Row="6" Text="Expandable" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Expandable}" />
+                                                    <TextBlock Grid.Row="7" Text="Tier change" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding PerformanceTierChange}" />
+                                                    <TextBlock Grid.Row="8" Text="Settings" Foreground="{DynamicResource B.TextMuted}" />
+                                                    <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding OptionsText}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Notes -->
                         <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                             <StackPanel>

@@ -169,6 +169,30 @@
 
                     <Border Style="{StaticResource Section}">
                         <StackPanel>
+                            <DockPanel Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Right" Text="&#xE753;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource B.Accent}" FontSize="16" />
+                                <TextBlock Text="Azure" Style="{StaticResource H2}" />
+                            </DockPanel>
+                            <TextBlock Text="Sign in with" Style="{StaticResource FieldLabel}" />
+                            <ListBox ItemsSource="{Binding AzureAuthModes}" SelectedItem="{Binding AzureAuthMode}" Style="{StaticResource SegmentList}" HorizontalAlignment="Left" />
+                            <StackPanel Style="{StaticResource Field}" Margin="0,12,0,10">
+                                <TextBlock Text="Tenant ID or domain (optional)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding AzureTenant}" />
+                            </StackPanel>
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource GhostButton}" Content="Sign out" Command="{Binding SignOutAzureCommand}" Margin="0,0,6,0" />
+                                    <Button Style="{StaticResource SoftButton}" Content="Sign in" Command="{Binding SignInAzureCommand}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding AzureStatus}" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
+                                       Text="Used by Disks › Sync from Azure to read VM disks, tiers, limits and prices. Read-only; Reader on the VM's subscription or resource group is enough. Browser sign-in is cached on this PC; Azure CLI reuses az login." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
                             <TextBlock Text="Behaviour" Style="{StaticResource H2}" Margin="0,0,0,12" />
                             <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray}" Content="Minimise to the notification area and keep collecting" Margin="0,0,0,10" />
                             <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows}" Content="Start with Windows" Margin="0,0,0,10" />
