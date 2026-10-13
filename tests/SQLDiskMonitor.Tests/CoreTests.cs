@@ -361,6 +361,33 @@ public class AzureTests
     }
 }
 
+public class ReportTests
+{
+    [Fact]
+    public async Task Report_contains_requested_sections_only()
+    {
+        using var t = new TempStore();
+        var cfg = new AppSettings { CostsEnabled = true, CurrencySymbol = "£" };
+        var server = new ServerConnection { Name = "Prod <SQL>", Address = "demo", HostName = "SQL01" };
+        server.Azure = DemoSource.DemoAzure().Vm;
+        t.Store.SaveServer(server);
+        foreach (var d in DemoSource.DemoDisks(server.Id)) t.Store.SaveDisk(d);
+        Collector.BackfillDemo(t.Store, server.Id, cfg, 1);
+
+        var html = await SQLDiskMonitor.Services.Reports.ReportBuilder.BuildAsync(t.Store, server, cfg, DateTime.Now.AddDays(-1), DateTime.Now,
+            new SQLDiskMonitor.Services.Reports.ReportOptions { Charts = false, Files = true }, "9.9.9");
+
+        Assert.StartsWith("<!doctype html>", html.TrimStart());
+        Assert.Contains("Storage report · Prod &lt;SQL&gt;", html);       // names are HTML-encoded
+        foreach (var section in new[] { "<h2>Summary</h2>", "<h2>Disks</h2>", "Pressure by hour of day", "Findings and recommendations",
+                                        "<h2>Space</h2>", "<h2>Costs</h2>", "<h2>IO waits</h2>", "Appendix: database files" })
+            Assert.Contains(section, html);
+        Assert.DoesNotContain("<h2>Trends</h2>", html);
+        Assert.Contains("Standard_E8ds_v5", html);
+        Assert.Contains("&#163;", html);                                     // £, as an HTML entity
+    }
+}
+
 public class AnalyticsTests
 {
     [Fact]

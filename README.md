@@ -31,6 +31,12 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 - Disks are matched to Windows volumes from a previous sync, OS disk to C:, recorded LUNs, or an unambiguous size match. That includes storage pools such as the SQL Server images' `SQLVMDATA1`, where several disks back one volume and their limits are added together. You confirm the matches before anything is saved.
 - Azure owns the disk name, LUN, tier, limits, size, host-cache tag and cost. Your label, drive name, notes and other tags are never changed, and tier or limit changes are added to the disk's change log.
 
+**Reports**
+- **Report** in the top bar creates a tidy **HTML or PDF** report for the period selected in the app. It includes a summary with headline figures, disks (with Azure details), the pressure heatmap, trend charts, findings and recommendations, space and growth, costs, IO waits and an optional file appendix. Choose which sections to include.
+- Example: [sample report (PDF)](docs/sample-report.pdf) · [HTML](docs/sample-report.html), from the demo server.
+- Reports are always laid out on a light, print-friendly background. PDFs are printed by the Edge engine built into Windows (WebView2), so they match the HTML exactly.
+- Scheduled reports: `SQLDiskMonitor.exe --report "C:\Reports\prod.pdf" --server "Prod SQL" --range 7d` writes a report without opening the app, so you can run it from Task Scheduler. Use `.html` for HTML, and add `--files` for the file appendix.
+
 **Disk pressure score**
 - A 0–100 score per disk per sample. It measures how hard SQL Server is pushing the disk, not hardware health:
   - **Capacity**: IOPS and MB/s as a percentage of the limits you set. Whichever is higher counts.
@@ -41,6 +47,7 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 **Metrics**
 - IOPS, throughput, read and write latency, pressure and pending IO over 15 minutes to 30 days, grouped by disk or by database.
 - Max and burst limits drawn on the charts, an optional read/write split, and note markers.
+- Click a disk pill to show or hide it. Right-click it to **show only that disk**, hide it, show all disks or invert the selection.
 - CSV export.
 
 **Space**

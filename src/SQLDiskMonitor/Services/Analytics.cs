@@ -154,7 +154,7 @@ public static class Analytics
         d is { AzureDisks.Count: 1 } && d.AzureDisks[0].NextTier != "" ? $" Azure: the next size up is {d.AzureDisks[0].NextTierText}." : "";
 
     private static string ExpandHint(DiskConfig? d) =>
-        d is { AzureDisks.Count: > 0 } ? $" Azure: expandable: {d.AzureDisks[0].Expandable.ToLowerInvariant()}" +
+        d is { AzureDisks.Count: > 0 } ? $" Expandable in Azure: {d.AzureDisks[0].Expandable}" +
             (d.AzureDisks.Count == 1 && d.AzureDisks[0].NextTier != "" ? $"; next size up {d.AzureDisks[0].NextTierText}." : ".") : "";
 
     private static string Hour(int h) => h < 0 ? "" : $"{h:00}:00–{(h + 1) % 24:00}:00";

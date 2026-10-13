@@ -61,7 +61,22 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <CheckBox Style="{StaticResource ToggleChip}" IsChecked="{Binding IsSelected}" />
+                        <CheckBox Style="{StaticResource ToggleChip}" IsChecked="{Binding IsSelected}"
+                                  ToolTip="Click to show or hide. Right-click for more."
+                                  Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                            <CheckBox.ContextMenu>
+                                <!-- Tag carries the page view model, since a context menu sits outside the visual tree -->
+                                <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="Show only this disk" Command="{Binding IsolateCommand}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <MenuItem Header="Hide this disk" Command="{Binding HideDiskCommand}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <Separator />
+                                    <MenuItem Header="Show all disks" Command="{Binding ShowAllCommand}" />
+                                    <MenuItem Header="Invert selection" Command="{Binding InvertSelectionCommand}" />
+                                </ContextMenu>
+                            </CheckBox.ContextMenu>
+                        </CheckBox>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

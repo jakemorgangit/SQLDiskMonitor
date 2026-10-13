@@ -130,6 +130,13 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void OpenReport()
+    {
+        if (SelectedServer == null) { ShowToast("Add a server first"); return; }
+        new Views.ReportWindow(new ReportViewModel(this)) { Owner = Application.Current.MainWindow }.ShowDialog();
+    }
+
+    [RelayCommand]
     private Task Refresh() => CurrentPage?.RefreshAsync() ?? Task.CompletedTask;
 
     // ───────────────────────── Servers ─────────────────────────

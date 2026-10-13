@@ -22,9 +22,10 @@ public partial class App : Application
         var args = e.Args.Select(a => a.ToLowerInvariant()).ToList();
         string? Arg(string name) { var i = args.IndexOf(name); return i >= 0 && i + 1 < e.Args.Length ? e.Args[i + 1] : null; }
         var screenshot = Arg("--screenshot");
+        var report = Arg("--report");
 
         // One collector per machine: a second launch just brings the running window forward.
-        if (screenshot == null)
+        if (screenshot == null && report == null)
         {
             _mutex = new Mutex(true, InstanceName, out bool first);
             if (!first)
@@ -58,6 +59,12 @@ public partial class App : Application
         _vm = new MainViewModel(store, settings);
         var window = new MainWindow(_vm);
         MainWindow = window;
+
+        if (report != null)
+        {
+            _ = ReportMode.RunAsync(_vm, report, Arg("--server"), Arg("--range"), args.Contains("--files"));
+            return;
+        }
 
         if (screenshot != null)
         {
