@@ -136,6 +136,13 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
     [ObservableProperty] private string _azureAuthMode = "Browser sign-in";
     [ObservableProperty] private string _azureTenant = "";
     [ObservableProperty] private string _azureStatus = "";
+    [ObservableProperty] private Services.Azure.AzureClient.AzureTenant? _selectedTenant;
+    public System.Collections.ObjectModel.ObservableCollection<Services.Azure.AzureClient.AzureTenant> Tenants { get; } = [];
+
+    partial void OnSelectedTenantChanged(Services.Azure.AzureClient.AzureTenant? value)
+    {
+        if (value != null) AzureTenant = value.Id;
+    }
 
     private void ApplyAzureSettings()
     {
@@ -150,17 +157,28 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
     [RelayCommand]
     private async Task SignInAzure()
     {
+        if (Services.Azure.AzureClient.ValidateTenant(AzureTenant) is { } problem)
+        {
+            AzureStatus = problem;
+            return;
+        }
         ApplyAzureSettings();
         Cfg.Save();
         AzureStatus = "Signing in…";
         try
         {
-            var who = await new Services.Azure.AzureClient(Cfg).SignInAsync();
+            var client = new Services.Azure.AzureClient(Cfg);
+            var who = await client.SignInAsync();
             AzureStatus = $"Signed in as {who}";
+            // Offer the account's tenants so nobody has to look up a GUID.
+            var tenants = await client.GetTenantsAsync();
+            Tenants.Clear();
+            foreach (var t in tenants) Tenants.Add(t);
+            if (tenants.Count > 1) AzureStatus += $". {tenants.Count} tenants available: pick one above and Save to switch.";
         }
         catch (Exception ex)
         {
-            AzureStatus = Cfg.AzureAuth == "AzureCli" ? $"Azure CLI not signed in. Run az login first. ({ex.Message})" : $"Sign-in failed: {ex.Message}";
+            AzureStatus = (Cfg.AzureAuth == "AzureCli" ? "Azure CLI sign-in failed: " : "Sign-in failed: ") + Services.Azure.AzureClient.FriendlyError(ex);
         }
     }
 
