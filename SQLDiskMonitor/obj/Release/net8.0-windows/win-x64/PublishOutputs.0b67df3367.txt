@@ -1,2 +1,0 @@
-c:\temp\latmon\LatencyMonitor.pdb
-c:\temp\latmon\LatencyMonitor.exe

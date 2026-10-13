@@ -1,0 +1,218 @@
+<UserControl x:Class="SQLDiskMonitor.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:SQLDiskMonitor.Controls"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:DashboardViewModel}">
+    <UserControl.Resources>
+        <DataTemplate x:Key="FindingRow">
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="3" CornerRadius="2" Background="{Binding Severity, Converter={StaticResource SeverityBrush}}" Margin="0,2,12,2" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock FontSize="10.5" FontWeight="SemiBold" Foreground="{Binding Severity, Converter={StaticResource SeverityBrush}}">
+                        <Run Text="{Binding SeverityText, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Category, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" FontWeight="SemiBold" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Empty state -->
+        <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560" Padding="36"
+                Visibility="{Binding HasServer, Converter={StaticResource BoolToVisInv}}">
+            <StackPanel>
+                <Border Width="56" Height="56" CornerRadius="14" Background="{DynamicResource B.AccentSoft}" HorizontalAlignment="Left">
+                    <TextBlock Text="&#xEDA2;" FontFamily="{StaticResource IconFont}" FontSize="26" Foreground="{DynamicResource B.Accent}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="Watch your SQL Server storage" Style="{StaticResource H1}" Margin="0,18,0,8" />
+                <TextBlock Style="{StaticResource Muted}" FontSize="13" LineHeight="20">
+                    Connect to an instance and SQL Disk Monitor samples file-level IO in the background. It maps every database file to its disk, scores each disk's
+                    pressure against the limits you set (IOPS, MB/s, burst), and shows when in the day the pressure builds.
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                    <Button Style="{StaticResource AccentButton}" Command="{Binding Shell.AddServerCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Add SQL Server" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SoftButton}" Margin="10,0,0,0" Command="{Binding Shell.AddDemoServerCommand}" Content="Explore with demo data" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource Caption}" Margin="0,18,0,0" TextWrapping="Wrap"
+                           Text="Needs VIEW SERVER STATE on the instance. Nothing is installed on the server." />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding HasServer, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <!-- KPIs -->
+                <UniformGrid Rows="1" Margin="0,0,-12,0">
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12">
+                        <DockPanel>
+                            <c:PressureGauge DockPanel.Dock="Right" Width="64" Height="64" Thickness="5" Value="{Binding ServerPressure}" Margin="6,0,0,0" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="PRESSURE NOW" Style="{StaticResource Overline}" />
+                                <TextBlock Style="{StaticResource Muted}">
+                                    <Run Text="Worst disk" /> <Run Text="{Binding WorstDisk, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="TOTAL IOPS" Style="{StaticResource Overline}" />
+                            <TextBlock Text="{Binding TotalIops, StringFormat=N0}" Style="{StaticResource Metric}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="THROUGHPUT" Style="{StaticResource Overline}" />
+                            <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding TotalMbps, StringFormat=N1, Mode=OneWay}" /><Run Text=" MB/s" FontSize="13" Foreground="{DynamicResource B.TextMuted}" /></TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="WORST LATENCY" Style="{StaticResource Overline}" />
+                            <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding WorstLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms" FontSize="13" Foreground="{DynamicResource B.TextMuted}" /></TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="DISKS UNDER PRESSURE" Style="{StaticResource Overline}" />
+                            <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding DisksAtRisk, Mode=OneWay}" /><Run Text=" high or critical" FontSize="13" Foreground="{DynamicResource B.TextMuted}" /></TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,12,12" Padding="16,12" Visibility="{Binding CostsEnabled, Converter={StaticResource BoolToVis}}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="STORAGE COST / MONTH" Style="{StaticResource Overline}" />
+                            <TextBlock Style="{StaticResource Metric}"><Run Text="{Binding Currency, Mode=OneWay}" /><Run Text="{Binding MonthlyCost, StringFormat=N0, Mode=OneWay}" /></TextBlock>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <DockPanel Margin="2,8,0,10">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding LastSampleText}" Style="{StaticResource Caption}" VerticalAlignment="Bottom" />
+                    <TextBlock Style="{StaticResource H2}">
+                        <Run Text="Disks" /><Run Text="  " /><Run Text="{Binding DatabaseCount, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text=" databases · " FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text="{Binding FileCount, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text=" files" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" />
+                    </TextBlock>
+                </DockPanel>
+
+                <TextBlock Style="{StaticResource Muted}" Margin="2,0,0,12" Visibility="{Binding HasData, Converter={StaticResource BoolToVisInv}}"
+                           Text="Waiting for the first samples. Pressure needs two snapshots, so the first figures appear after one collection interval." />
+
+                <ItemsControl ItemsSource="{Binding Cards}" Margin="0,0,-12,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="2" VerticalAlignment="Top" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DiskCardViewModel}">
+                            <Border Style="{StaticResource Card}" Margin="0,0,12,12" Cursor="Hand" ToolTip="Open disk settings">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick"
+                                                  Command="{Binding DataContext.OpenDiskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                  CommandParameter="{Binding}" />
+                                </Border.InputBindings>
+                                <StackPanel>
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource Chip}" Visibility="{Binding LunText, Converter={StaticResource HasValue}}">
+                                                <TextBlock Text="{Binding LunText}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
+                                            </Border>
+                                            <Border Style="{StaticResource Chip}" Margin="0" Visibility="{Binding Tier, Converter={StaticResource HasValue}}">
+                                                <TextBlock Text="{Binding Tier}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock VerticalAlignment="Center">
+                                            <Run Text="{Binding Volume, Mode=OneWay}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                                            <Run Text="  " /><Run Text="{Binding Label, Mode=OneWay}" FontSize="13" Foreground="{DynamicResource B.TextMuted}" />
+                                        </TextBlock>
+                                    </DockPanel>
+
+                                    <ItemsControl ItemsSource="{Binding Config.TagList}" Margin="0,8,0,0"
+                                                  Visibility="{Binding Config.Tags, Converter={StaticResource HasValue}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="9" Padding="8,1" Margin="0,0,5,4" Background="{DynamicResource B.AccentSoft}">
+                                                    <TextBlock Text="{Binding}" FontSize="10.5" Foreground="{DynamicResource B.Accent}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Grid Margin="0,14,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="118" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <c:PressureGauge Width="104" Height="104" Value="{Binding Pressure}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Margin="8,2,0,0">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding IopsText}" FontSize="12" FontWeight="SemiBold" />
+                                                <TextBlock Text="IOPS" Style="{StaticResource Muted}" />
+                                            </DockPanel>
+                                            <c:MeterBar Value="{Binding Iops}" Maximum="{Binding Config.MaxIops}" Burst="{Binding Config.BurstIops}" Margin="0,5,0,11" />
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding MbpsText}" FontSize="12" FontWeight="SemiBold" />
+                                                <TextBlock Text="Throughput MB/s" Style="{StaticResource Muted}" />
+                                            </DockPanel>
+                                            <c:MeterBar Value="{Binding Mbps}" Maximum="{Binding Config.MaxMbps}" Burst="{Binding Config.BurstMbps}" Margin="0,5,0,11" />
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold">
+                                                    <Run Text="R" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding ReadLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms  " />
+                                                    <Run Text="W" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding WriteLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms" />
+                                                </TextBlock>
+                                                <TextBlock Text="Latency" Style="{StaticResource Muted}" />
+                                            </DockPanel>
+                                            <DockPanel Margin="0,10,0,0">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding SpaceText}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
+                                                <TextBlock Text="Space" Style="{StaticResource Muted}" />
+                                            </DockPanel>
+                                            <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" />
+                                            <TextBlock Text="{Binding SpaceTrend}" Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,4,0,0"
+                                                       Visibility="{Binding SpaceTrend, Converter={StaticResource HasValue}}" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Text="Pressure · last 30 minutes" Style="{StaticResource Caption}" Margin="0,14,0,4" />
+                                    <c:Sparkline Values="{Binding Spark}" Maximum="100" Height="38" Stroke="{Binding Pressure, Converter={StaticResource PressureBrush}}" />
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding PeakText}" Style="{StaticResource Caption}" />
+                                        <TextBlock Text="{Binding FilesSummary}" Style="{StaticResource Caption}" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Style="{StaticResource Card}" Margin="0,4,0,0" Visibility="{Binding TopFindings.Count, Converter={StaticResource HasValue}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="All findings →"
+                                    Command="{Binding Shell.NavigateCommand}" CommandParameter="{Binding Shell.Insights}" />
+                            <TextBlock Text="Bottlenecks · last 24 hours" Style="{StaticResource H2}" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding TopFindings}" ItemTemplate="{StaticResource FindingRow}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
