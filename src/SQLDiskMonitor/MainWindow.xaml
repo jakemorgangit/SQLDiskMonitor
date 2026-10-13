@@ -149,6 +149,13 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <ListBox ItemsSource="{Binding TimeRanges}" SelectedItem="{Binding SelectedRange}" Style="{StaticResource SegmentList}"
                              Visibility="{Binding CurrentPage.UsesTimeRange, Converter={StaticResource BoolToVis}}" Margin="0,0,10,0" />
+                    <Button Style="{StaticResource GhostButton}" Command="{Binding OpenReportCommand}" ToolTip="Create an HTML or PDF report" Margin="0,0,2,0"
+                            Visibility="{Binding SelectedServer, Converter={StaticResource HasValue}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,7,0" />
+                            <TextBlock Text="Report" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource GhostButton}" Command="{Binding RefreshCommand}" ToolTip="Refresh (F5)" Margin="0,0,6,0">
                         <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="14" />
                     </Button>

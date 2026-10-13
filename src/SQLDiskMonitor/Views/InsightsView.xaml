@@ -90,11 +90,11 @@
                 <StackPanel>
                     <TextBlock Text="Share this analysis" Style="{StaticResource H2}" />
                     <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,12"
-                               Text="A self-contained HTML report with disks, findings, IO waits and the file layout, for change requests or the infrastructure team." />
+                               Text="A tidy HTML or PDF report with a summary, disks, pressure heatmap, trend charts, findings, space and costs, for change requests or the infrastructure team." />
                     <Button Style="{StaticResource AccentButton}" HorizontalAlignment="Left" Command="{Binding ExportReportCommand}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Export HTML report" />
+                            <TextBlock Text="Create report…" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

@@ -46,6 +46,23 @@ public static class ScreenshotMode
                     }
                     vm.Dashboard.CardLayout = "Normal";
                 }
+                if (p == vm.Disks && pages.Count > 1 && vm.SelectedServer is { Azure: { } link } server)
+                {
+                    // The Azure sync window, filled with the demo's simulated VM (no Azure account needed).
+                    var (_, demoDisks) = Services.DemoSource.DemoAzure();
+                    var infos = demoDisks.Values.SelectMany(x => x).ToList();
+                    var detail = new Services.Azure.AzureVmDetail(
+                        new Services.Azure.AzureVm(link.VmId, link.Name, link.ResourceGroup, link.SubscriptionId, link.SubscriptionName, link.Location, link.ComputerName, link.VmSize),
+                        [], link.MaxIops, link.MaxMbps, link.MaxDataDisks, link.DataDisksAttached);
+                    var disks = vm.Store.GetDisks(server.Id);
+                    var syncVm = new AzureSyncViewModel(vm.Store, vm.Settings, server, disks, disks.ToDictionary(d => d.Volume, d => d.SizeGb));
+                    syncVm.ShowMatches(detail, infos);
+                    var syncWin = new Views.AzureSyncWindow(syncVm) { Owner = window, ShowInTaskbar = false };
+                    syncWin.Show();
+                    await Task.Delay(1000);
+                    Save(syncWin, file.Replace("-disks.png", "-azure-sync.png"));
+                    syncWin.Close();
+                }
                 if (p == vm.Disks && pages.Count > 1)
                 {
                     vm.Disks.ViewMode = "Inventory";

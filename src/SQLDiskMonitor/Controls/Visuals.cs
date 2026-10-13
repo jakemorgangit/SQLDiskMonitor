@@ -7,8 +7,16 @@ namespace SQLDiskMonitor.Controls;
 
 public static class Palette
 {
-    public static Brush Brush(string key) => Application.Current.TryFindResource("B." + key) as Brush ?? Brushes.Gray;
-    public static Color Color(string key) => Application.Current.TryFindResource("C." + key) is Color c ? c : Colors.Gray;
+    /// <summary>When set (e.g. while rendering a printable report), colours come from this palette instead of the current theme.</summary>
+    public static ResourceDictionary? Override { get; set; }
+
+    public static ResourceDictionary LightPalette() =>
+        new() { Source = new Uri("pack://application:,,,/SQLDiskMonitor;component/Themes/Light.xaml") };
+
+    public static Brush Brush(string key) =>
+        (Override?.Contains("B." + key) == true ? Override["B." + key] : Application.Current.TryFindResource("B." + key)) as Brush ?? Brushes.Gray;
+    public static Color Color(string key) =>
+        (Override?.Contains("C." + key) == true ? Override["C." + key] : Application.Current.TryFindResource("C." + key)) is Color c ? c : Colors.Gray;
 
     public static Brush ForPressure(double p) => Brush(BandKey(p));
     public static Color ColorForPressure(double p) => Color(BandKey(p));

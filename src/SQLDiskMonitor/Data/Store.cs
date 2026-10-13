@@ -120,7 +120,9 @@ public class Store
         // Columns added after the first schema; ignore "duplicate column" on databases that already have them.
         foreach (var alter in new[] { "ALTER TABLE files ADD COLUMN used_mb REAL NULL", "ALTER TABLE disks ADD COLUMN tags TEXT NOT NULL DEFAULT ''",
                                          "ALTER TABLE disks ADD COLUMN drive_name TEXT NOT NULL DEFAULT ''",
-                                         "ALTER TABLE disks ADD COLUMN disk_name TEXT NOT NULL DEFAULT ''" })
+                                         "ALTER TABLE disks ADD COLUMN disk_name TEXT NOT NULL DEFAULT ''",
+                                         "ALTER TABLE disks ADD COLUMN azure_json TEXT NULL",
+                                         "ALTER TABLE servers ADD COLUMN azure_json TEXT NULL" })
         {
             try { Exec(c, alter); } catch (SqliteException) { }
         }
@@ -143,6 +145,12 @@ public class Store
         while (r.Read()) yield return r;
     }
 
+    private static T? FromJson<T>(string? json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<T>(json); } catch { return null; }
+    }
+
     public static long ToUnix(DateTime t) => new DateTimeOffset(t.ToUniversalTime()).ToUnixTimeSeconds();
     public static DateTime FromUnix(long s) => DateTimeOffset.FromUnixTimeSeconds(s).LocalDateTime;
 
@@ -151,12 +159,13 @@ public class Store
     public List<ServerConnection> GetServers()
     {
         using var c = Open();
-        return Query(c, "SELECT id,name,address,auth,username,trust_cert,encrypt,timeout,monitor,host_name,version FROM servers ORDER BY name")
+        return Query(c, "SELECT id,name,address,auth,username,trust_cert,encrypt,timeout,monitor,host_name,version,azure_json FROM servers ORDER BY name")
             .Select(r => new ServerConnection
             {
                 Id = r.GetInt64(0), Name = r.GetString(1), Address = r.GetString(2), Auth = (AuthMode)r.GetInt32(3),
                 Username = r.GetString(4), TrustCertificate = r.GetInt32(5) == 1, Encrypt = r.GetInt32(6) == 1,
-                Timeout = r.GetInt32(7), Monitor = r.GetInt32(8) == 1, HostName = r.GetString(9), Version = r.GetString(10)
+                Timeout = r.GetInt32(7), Monitor = r.GetInt32(8) == 1, HostName = r.GetString(9), Version = r.GetString(10),
+                Azure = FromJson<Services.Azure.AzureVmLink>(r.IsDBNull(11) ? null : r.GetString(11))
             }).ToList();
     }
 
@@ -167,14 +176,15 @@ public class Store
         {
             ("$id", s.Id), ("$name", s.Name), ("$address", s.Address), ("$auth", (int)s.Auth), ("$user", s.Username),
             ("$trust", s.TrustCertificate ? 1 : 0), ("$enc", s.Encrypt ? 1 : 0), ("$timeout", s.Timeout),
-            ("$mon", s.Monitor ? 1 : 0), ("$host", s.HostName), ("$ver", s.Version)
+            ("$mon", s.Monitor ? 1 : 0), ("$host", s.HostName), ("$ver", s.Version),
+            ("$az", s.Azure == null ? null : System.Text.Json.JsonSerializer.Serialize(s.Azure))
         };
         if (s.Id == 0)
         {
             using var cmd = c.CreateCommand();
             cmd.CommandText = """
-                INSERT INTO servers(name,address,auth,username,trust_cert,encrypt,timeout,monitor,host_name,version)
-                VALUES($name,$address,$auth,$user,$trust,$enc,$timeout,$mon,$host,$ver); SELECT last_insert_rowid();
+                INSERT INTO servers(name,address,auth,username,trust_cert,encrypt,timeout,monitor,host_name,version,azure_json)
+                VALUES($name,$address,$auth,$user,$trust,$enc,$timeout,$mon,$host,$ver,$az); SELECT last_insert_rowid();
                 """;
             foreach (var (n, v) in args) cmd.Parameters.AddWithValue(n, v ?? DBNull.Value);
             s.Id = (long)cmd.ExecuteScalar()!;
@@ -183,7 +193,7 @@ public class Store
         {
             Exec(c, """
                 UPDATE servers SET name=$name,address=$address,auth=$auth,username=$user,trust_cert=$trust,encrypt=$enc,
-                timeout=$timeout,monitor=$mon,host_name=$host,version=$ver WHERE id=$id
+                timeout=$timeout,monitor=$mon,host_name=$host,version=$ver,azure_json=$az WHERE id=$id
                 """, args);
         }
     }
@@ -207,7 +217,7 @@ public class Store
         using var c = Open();
         return Query(c, """
             SELECT volume,label,lun,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,cost_monthly,cost_per_gb,
-                   cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name
+                   cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name,azure_json
             FROM disks WHERE server_id=$s ORDER BY volume
             """, ("$s", serverId))
             .Select(r => new DiskConfig
@@ -217,7 +227,8 @@ public class Store
                 BurstMbps = r.GetDouble(7), SizeGb = r.GetDouble(8), CostMonthly = r.GetDouble(9), CostPerGb = r.GetDouble(10),
                 CostPerIops = r.GetDouble(11), CostPerMbps = r.GetDouble(12), Notes = r.GetString(13),
                 DiskNumber = r.IsDBNull(14) ? null : r.GetInt32(14), DeviceModel = r.GetString(15), Tags = r.GetString(16),
-                DriveName = r.GetString(17), DiskName = r.GetString(18)
+                DriveName = r.GetString(17), DiskName = r.GetString(18),
+                AzureDisks = FromJson<List<Services.Azure.AzureDiskInfo>>(r.IsDBNull(19) ? null : r.GetString(19)) ?? []
             }).ToList();
     }
 
@@ -236,17 +247,18 @@ public class Store
         using var c = Open();
         Exec(c, """
             INSERT INTO disks(server_id,volume,label,lun,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,cost_monthly,
-                              cost_per_gb,cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name)
-            VALUES($s,$v,$label,$lun,$tier,$iops,$mbps,$biops,$bmbps,$size,$cm,$cgb,$ciops,$cmbps,$notes,$dn,$model,$tags,$drive,$disk)
+                              cost_per_gb,cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name,azure_json)
+            VALUES($s,$v,$label,$lun,$tier,$iops,$mbps,$biops,$bmbps,$size,$cm,$cgb,$ciops,$cmbps,$notes,$dn,$model,$tags,$drive,$disk,$azure)
             ON CONFLICT(server_id,volume) DO UPDATE SET label=$label,lun=$lun,tier=$tier,max_iops=$iops,max_mbps=$mbps,
                 burst_iops=$biops,burst_mbps=$bmbps,size_gb=$size,cost_monthly=$cm,cost_per_gb=$cgb,cost_per_iops=$ciops,
-                cost_per_mbps=$cmbps,notes=$notes,disk_number=$dn,device_model=$model,tags=$tags,drive_name=$drive,disk_name=$disk
+                cost_per_mbps=$cmbps,notes=$notes,disk_number=$dn,device_model=$model,tags=$tags,drive_name=$drive,disk_name=$disk,azure_json=$azure
             """,
             ("$s", d.ServerId), ("$v", d.Volume), ("$label", d.Label), ("$lun", d.Lun), ("$tier", d.Tier),
             ("$iops", d.MaxIops), ("$mbps", d.MaxMbps), ("$biops", d.BurstIops), ("$bmbps", d.BurstMbps),
             ("$size", d.SizeGb), ("$cm", d.CostMonthly), ("$cgb", d.CostPerGb), ("$ciops", d.CostPerIops),
             ("$cmbps", d.CostPerMbps), ("$notes", d.Notes), ("$dn", d.DiskNumber), ("$model", d.DeviceModel), ("$tags", d.Tags),
-            ("$drive", d.DriveName), ("$disk", d.DiskName));
+            ("$drive", d.DriveName), ("$disk", d.DiskName),
+            ("$azure", d.AzureDisks.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(d.AzureDisks)));
     }
 
     public List<DiskNote> GetNotes(long serverId, string? volume = null)

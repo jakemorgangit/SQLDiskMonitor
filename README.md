@@ -23,6 +23,20 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 **Overview**
 - Disk cards come in three layouts, remembered between launches: **Compact** (four per row, the headline numbers only), **Normal** (full detail) and **List** (one short row per disk).
 
+**Azure integration**
+- **Sync from Azure** (Disks page): sign in in the browser (cached), or reuse `az login`. Pick the VM; the app suggests the one whose computer name matches the SQL Server host. Reader access is enough, and nothing in Azure is changed.
+- For each managed disk it reads the disk name, LUN, type and **tier** (including a performance tier set above the size's own tier), provisioned **IOPS and MB/s**, bursting (credit-based or on-demand), size, host caching, write accelerator, zone, encryption, network access and creation date.
+- It shows the **next size up** (size, IOPS, MB/s and extra monthly cost) and whether the disk is **expandable** (online, needs the VM deallocated, at maximum size, or shared). Monthly prices come from the Azure retail price list in your currency.
+- It also reads the VM size's **uncached disk limit** and data-disk slots. A finding flags when the VM, not the disks, is the cap.
+- Disks are matched to Windows volumes from a previous sync, OS disk to C:, recorded LUNs, or an unambiguous size match. That includes storage pools such as the SQL Server images' `SQLVMDATA1`, where several disks back one volume and their limits are added together. You confirm the matches before anything is saved.
+- Azure owns the disk name, LUN, tier, limits, size, host-cache tag and cost. Your label, drive name, notes and other tags are never changed, and tier or limit changes are added to the disk's change log.
+
+**Reports**
+- **Report** in the top bar creates a tidy **HTML or PDF** report for the period selected in the app. It includes a summary with headline figures, disks (with Azure details), the pressure heatmap, trend charts, findings and recommendations, space and growth, costs, IO waits and an optional file appendix. Choose which sections to include.
+- Example: [sample report (PDF)](docs/sample-report.pdf) · [HTML](docs/sample-report.html), from the demo server.
+- Reports are always laid out on a light, print-friendly background. PDFs are printed by the Edge engine built into Windows (WebView2), so they match the HTML exactly.
+- Scheduled reports: `SQLDiskMonitor.exe --report "C:\Reports\prod.pdf" --server "Prod SQL" --range 7d` writes a report without opening the app, so you can run it from Task Scheduler. Use `.html` for HTML, and add `--files` for the file appendix.
+
 **Disk pressure score**
 - A 0–100 score per disk per sample. It measures how hard SQL Server is pushing the disk, not hardware health:
   - **Capacity**: IOPS and MB/s as a percentage of the limits you set. Whichever is higher counts.
@@ -33,6 +47,7 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 **Metrics**
 - IOPS, throughput, read and write latency, pressure and pending IO over 15 minutes to 30 days, grouped by disk or by database.
 - Max and burst limits drawn on the charts, an optional read/write split, and note markers.
+- Click a disk pill to show or hide it. Right-click it to **show only that disk**, hide it, show all disks or invert the selection.
 - CSV export.
 
 **Space**
@@ -70,8 +85,9 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 | | |
 |---|---|
 | ![Pressure](docs/screenshots/dark-pressure.png) **Pressure heatmaps** | ![Metrics](docs/screenshots/light-metrics.png) **Metrics with limits and notes** |
-| ![Space](docs/screenshots/dark-space.png) **Space and growth** | ![Disks](docs/screenshots/dark-disks.png) **Disk limits, LUN, cost and notes** |
+| ![Space](docs/screenshots/dark-space.png) **Space and growth** | ![Light disks](docs/screenshots/light-disks.png) **Disk limits, LUN, cost and notes** |
 | ![Bottlenecks](docs/screenshots/dark-bottlenecks.png) **Bottlenecks** | ![Costs](docs/screenshots/dark-costs.png) **Costs** |
+| ![Azure sync](docs/screenshots/dark-azure-sync.png) **Sync from Azure** | ![Disks with Azure details](docs/screenshots/dark-disks.png) **Azure details per disk** |
 | ![Inventory](docs/screenshots/dark-inventory.png) **Disk inventory, editable in place** | ![Files](docs/screenshots/dark-files.png) **Files** |
 | ![Compact](docs/screenshots/dark-overview-compact.png) **Overview: compact cards** | ![List](docs/screenshots/dark-overview-list.png) **Overview: list layout** |
 | ![Light theme](docs/screenshots/light-overview.png) **Light theme** | ![Light pressure](docs/screenshots/light-pressure.png) **Light theme heatmaps** |
@@ -89,6 +105,7 @@ The app is self-contained, so no .NET runtime install is needed.
 - Windows 10 or 11, x64.
 - SQL Server 2016 or later (on-premises, VM or Azure SQL Managed Instance).
 - A login with **VIEW SERVER STATE**. Used-space figures also need access to each database; databases the login can't enter are skipped.
+- **Sync from Azure** needs Reader on the VM's subscription or resource group.
 - **Detect LUNs** needs remote WMI access to the SQL Server host, which normally means local admin. Without it, enter LUNs by hand.
 - Authentication: Windows, SQL login, Microsoft Entra integrated or Entra password. Passwords are stored in Windows Credential Manager.
 

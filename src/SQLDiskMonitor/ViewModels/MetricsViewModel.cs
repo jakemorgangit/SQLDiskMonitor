@@ -182,7 +182,33 @@ public partial class MetricsViewModel(MainViewModel shell) : PageViewModel(shell
 
     private static string FormatBucket(int s) => s >= 3600 ? $"{s / 3600.0:0.#} h" : s >= 60 ? $"{s / 60.0:0.#} min" : $"{s} s";
 
-    private void OptionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => _ = RefreshAsync();
+    private bool _bulkChange;
+
+    private void OptionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (!_bulkChange) _ = RefreshAsync();
+    }
+
+    /// <summary>Changes several pills at once with a single redraw.</summary>
+    private void SetSelection(Func<SeriesOption, bool> selected)
+    {
+        _bulkChange = true;
+        try { foreach (var o in DiskOptions) o.IsSelected = selected(o); }
+        finally { _bulkChange = false; }
+        _ = RefreshAsync();
+    }
+
+    [RelayCommand]
+    private void Isolate(SeriesOption option) => SetSelection(o => o == option);
+
+    [RelayCommand]
+    private void HideDisk(SeriesOption option) => option.IsSelected = false;
+
+    [RelayCommand]
+    private void ShowAll() => SetSelection(_ => true);
+
+    [RelayCommand]
+    private void InvertSelection() => SetSelection(o => !o.IsSelected);
 
     public override void OnSample(SampleBatch batch)
     {

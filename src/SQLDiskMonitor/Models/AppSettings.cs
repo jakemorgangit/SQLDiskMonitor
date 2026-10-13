@@ -46,6 +46,10 @@ public class AppSettings
         CountFileFreeSpace && v != null ? v.EffectiveFreePct : volumeFreePct;
 
     public long LastServerId { get; set; }
+
+    /// <summary>Azure sign-in: "Browser" (interactive, cached) or "AzureCli" (reuse az login).</summary>
+    public string AzureAuth { get; set; } = "Browser";
+    public string AzureTenantId { get; set; } = "";
     /// <summary>Overview disk card layout: Compact, Normal or List.</summary>
     public string DashboardLayout { get; set; } = "Normal";
 

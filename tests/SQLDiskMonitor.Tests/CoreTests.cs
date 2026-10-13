@@ -2,6 +2,7 @@ using System.IO;
 using SQLDiskMonitor.Data;
 using SQLDiskMonitor.Models;
 using SQLDiskMonitor.Services;
+using SQLDiskMonitor.Services.Azure;
 using Xunit;
 
 namespace SQLDiskMonitor.Tests;
@@ -239,6 +240,151 @@ public class DiskCsvImportTests
         var blank = new List<DiskConfig> { new() { Volume = "F:\\" } };
         DiskCsvImport.Apply(exported, blank);
         Assert.Equal(("Data", "vm-datadisk-00", 0), (blank[0].Label, blank[0].DiskName, blank[0].Lun!.Value));
+    }
+}
+
+public class AzureTests
+{
+    private static AzureDisk Disk(string name, int? lun, double size, string tier, double iops, double mbps, string sku = "Premium_LRS",
+        string caching = "ReadOnly", bool os = false, bool bursting = false, int shares = 1) =>
+        new($"/subscriptions/s/resourceGroups/rg/providers/Microsoft.Compute/disks/{name}", name, lun, os, caching, false, size, sku, tier, iops, mbps, bursting, "uksouth", shares);
+
+    [Fact]
+    public void Next_tier_uses_the_higher_of_size_and_performance_tier()
+    {
+        Assert.Equal("P40", AzureTiers.NextTier("Premium_LRS", "P30", 1024)!.Name);
+        Assert.Equal("P40", AzureTiers.NextTier("Premium_LRS", "P30", 512)!.Name);   // P20-sized disk running at P30
+        Assert.Equal("E40", AzureTiers.NextTier("StandardSSD_LRS", "E30", 1024)!.Name);
+        Assert.Null(AzureTiers.NextTier("Premium_LRS", "P80", 32767));
+        Assert.Null(AzureTiers.NextTier("PremiumV2_LRS", "", 2048));
+        Assert.Equal("P20", AzureTiers.BaseTier("Premium_LRS", 500)!.Name);
+    }
+
+    [Fact]
+    public void Burst_and_expandable_follow_azure_rules()
+    {
+        Assert.Equal((3500, 170, "credit-based"), AzureTiers.Burst(Disk("a", 0, 512, "P20", 2300, 150)));
+        Assert.Equal((30000, 1000, "on-demand"), AzureTiers.Burst(Disk("b", 0, 1024, "P30", 5000, 200, bursting: true)));
+        Assert.Equal((0, 0, ""), AzureTiers.Burst(Disk("c", 0, 1024, "P30", 5000, 200)));
+
+        Assert.StartsWith("Yes, online", AzureTiers.Expandable(Disk("d", 0, 1024, "P30", 5000, 200)));
+        Assert.StartsWith("Yes, with the VM deallocated", AzureTiers.Expandable(Disk("e", null, 127, "P10", 500, 100, os: true)));
+        Assert.StartsWith("No: shared", AzureTiers.Expandable(Disk("f", 0, 1024, "P30", 5000, 200, shares: 2)));
+        Assert.StartsWith("No: already at the maximum", AzureTiers.Expandable(Disk("g", 0, 32767, "P80", 20000, 900)));
+    }
+
+    private static AzureDiskInfo Info(AzureDisk d) => new()
+    {
+        Id = d.Id, Name = d.Name, Lun = d.Lun, IsOsDisk = d.IsOsDisk, SkuName = d.SkuName, Tier = d.Tier, SizeGb = d.SizeGb,
+        Iops = d.Iops, Mbps = d.Mbps, Caching = d.Caching, MonthlyPrice = 100
+    };
+
+    [Fact]
+    public void Suggests_os_lun_size_and_storage_pool_matches()
+    {
+        var azure = new[]
+        {
+            Info(Disk("vm-os", null, 127, "P10", 500, 100, os: true, caching: "ReadWrite")),
+            Info(Disk("vm-log", 3, 512, "P20", 2300, 150, caching: "None")),
+            Info(Disk("vm-data-0", 0, 1024, "P30", 5000, 200)),
+            Info(Disk("vm-data-1", 1, 1024, "P30", 5000, 200)),
+            Info(Disk("vm-data-2", 2, 1024, "P30", 5000, 200)),
+            Info(Disk("vm-misc", 4, 256, "P15", 1100, 125)),
+        };
+        var volumes = new List<DiskConfig>
+        {
+            new() { Volume = "C:\\" },
+            new() { Volume = "G:\\", Lun = 3 },        // LUN entered by hand
+            new() { Volume = "F:\\" },                 // SQLVMDATA1-style pool of three P30s
+            new() { Volume = "M:\\" },                 // single disk, matched by size
+            new() { Volume = "D:\\" },                 // temporary storage: no managed disk
+        };
+        var sizes = new Dictionary<string, double> { ["C:\\"] = 126.4, ["G:\\"] = 511.9, ["F:\\"] = 3069.9, ["M:\\"] = 255.9, ["D:\\"] = 64 };
+
+        var m = AzureSync.Suggest(azure, volumes, sizes).ToDictionary(x => x.Disk.Name);
+        Assert.Equal(("C:\\", "OS disk"), (m["vm-os"].Volume, m["vm-os"].Reason));
+        Assert.Equal(("G:\\", "LUN 3"), (m["vm-log"].Volume, m["vm-log"].Reason));
+        Assert.All(new[] { "vm-data-0", "vm-data-1", "vm-data-2" }, n => Assert.Equal("F:\\", m[n].Volume));
+        Assert.Equal(("M:\\", "size"), (m["vm-misc"].Volume, m["vm-misc"].Reason));
+    }
+
+    [Fact]
+    public void Apply_sets_azure_fields_keeps_user_fields_and_logs_changes()
+    {
+        var pool = new[] { "0", "1", "2" }.Select(i => Info(Disk($"vm-data-{i}", int.Parse(i), 1024, "P30", 5000, 200))).ToList();
+        var f = new DiskConfig
+        {
+            Volume = "F:\\", Label = "SQLVMDATA1", DriveName = "SQL data", Notes = "keep me", Lun = 7,
+            Tier = "Azure P20", MaxIops = 2300, MaxMbps = 150, Tags = "owner: DBA, host cache: None"
+        };
+        var note = AzureSync.Apply(f, pool, setCost: true);
+
+        Assert.Equal(("SQLVMDATA1", "SQL data", "keep me", 7), (f.Label, f.DriveName, f.Notes, f.Lun!.Value)); // pool: LUN untouched
+        Assert.Equal("vm-data-0, vm-data-1, vm-data-2", f.DiskName);
+        Assert.Equal("Azure P30 ×3", f.Tier);
+        Assert.Equal((15000.0, 600.0, 3072.0, 300.0), (f.MaxIops, f.MaxMbps, f.SizeGb, f.CostMonthly));
+        Assert.Contains("LUN 0, 1, 2", f.DeviceModel);
+        Assert.Equal(["owner: DBA", "host cache: ReadOnly"], f.TagList);
+        Assert.Equal(3, f.AzureDisks.Count);
+        Assert.Equal("Azure: Azure P20 → Azure P30 ×3; 2,300 → 15,000 IOPS; 150 → 600 MB/s", note);
+
+        var single = new DiskConfig { Volume = "G:\\" };
+        Assert.Null(AzureSync.Apply(single, [Info(Disk("vm-log", 3, 512, "P20", 2300, 150, caching: "None"))], setCost: false));
+        Assert.Equal((3, "Azure P20", 0.0), (single.Lun!.Value, single.Tier, single.CostMonthly));
+    }
+
+    [Fact]
+    public void Azure_details_persist_with_disks_and_servers()
+    {
+        using var t = new TempStore();
+        var server = new ServerConnection { Name = "s", Address = "x", Azure = new AzureVmLink { VmId = "/subscriptions/s/vm", VmSize = "Standard_E16ds_v5", MaxIops = 25600, MaxMbps = 600 } };
+        t.Store.SaveServer(server);
+        var d = new DiskConfig { ServerId = server.Id, Volume = "F:\\" };
+        AzureSync.Apply(d, [Info(Disk("vm-data-0", 0, 1024, "P30", 5000, 200))], false);
+        t.Store.SaveDisk(d);
+
+        var s2 = t.Store.GetServers().Single();
+        Assert.Equal(("Standard_E16ds_v5", 25600.0), (s2.Azure!.VmSize, s2.Azure.MaxIops!.Value));
+        var d2 = t.Store.GetDisks(server.Id).Single();
+        Assert.Equal("vm-data-0", Assert.Single(d2.AzureDisks).Name);
+        Assert.Equal("P30", d2.AzureDisks[0].Tier);
+    }
+
+    /// <summary>Uses the public Azure retail price API (no sign-in). Runs when SQLDM_TEST_NETWORK=1.</summary>
+    [Fact]
+    public async Task Retail_price_lookup_returns_monthly_disk_price()
+    {
+        if (Environment.GetEnvironmentVariable("SQLDM_TEST_NETWORK") != "1") return;
+        var p30 = await AzureClient.GetMonthlyTierPriceAsync("Premium_LRS", "P30", "uksouth", "GBP");
+        Assert.True(p30 is > 50 and < 500, $"P30 price {p30}");
+        Assert.Null(await AzureClient.GetMonthlyTierPriceAsync("PremiumV2_LRS", "", "uksouth", "GBP"));
+    }
+}
+
+public class ReportTests
+{
+    [Fact]
+    public async Task Report_contains_requested_sections_only()
+    {
+        using var t = new TempStore();
+        var cfg = new AppSettings { CostsEnabled = true, CurrencySymbol = "£" };
+        var server = new ServerConnection { Name = "Prod <SQL>", Address = "demo", HostName = "SQL01" };
+        server.Azure = DemoSource.DemoAzure().Vm;
+        t.Store.SaveServer(server);
+        foreach (var d in DemoSource.DemoDisks(server.Id)) t.Store.SaveDisk(d);
+        Collector.BackfillDemo(t.Store, server.Id, cfg, 1);
+
+        var html = await SQLDiskMonitor.Services.Reports.ReportBuilder.BuildAsync(t.Store, server, cfg, DateTime.Now.AddDays(-1), DateTime.Now,
+            new SQLDiskMonitor.Services.Reports.ReportOptions { Charts = false, Files = true }, "9.9.9");
+
+        Assert.StartsWith("<!doctype html>", html.TrimStart());
+        Assert.Contains("Storage report · Prod &lt;SQL&gt;", html);       // names are HTML-encoded
+        foreach (var section in new[] { "<h2>Summary</h2>", "<h2>Disks</h2>", "Pressure by hour of day", "Findings and recommendations",
+                                        "<h2>Space</h2>", "<h2>Costs</h2>", "<h2>IO waits</h2>", "Appendix: database files" })
+            Assert.Contains(section, html);
+        Assert.DoesNotContain("<h2>Trends</h2>", html);
+        Assert.Contains("Standard_E8ds_v5", html);
+        Assert.Contains("&#163;", html);                                     // £, as an HTML entity
     }
 }
 

@@ -106,9 +106,56 @@ public static class Analytics
             Space = SpaceAnalytics.Analyse(store, serverId, from, to)
         };
         result.Findings.AddRange(BuildFindings(result, disks, files, cfg));
+        var vm = store.GetServers().FirstOrDefault(x => x.Id == serverId)?.Azure;
+        // VM-level uncached disk limit (Azure). Cached reads don't count against it, so only uncached IO is added up:
+        // disks with host caching None count fully, ReadOnly-cached disks count writes only, ReadWrite-cached disks not at all.
+        if (vm is { MaxIops: > 0 } && samples.Count > 0)
+        {
+            double Share(string volume, bool writes) =>
+                disks.TryGetValue(volume, out var dc) && dc.AzureDisks.Count > 0
+                    ? (dc.AzureDisks[0].Caching ?? "") switch { "" or "None" => 1, "ReadOnly" => writes ? 1 : 0, _ => 0 }
+                    : 0;
+            var totals = samples.GroupBy(s => s.Timestamp).Select(g => (
+                Iops: g.Sum(s => s.ReadIops * Share(s.Volume, false) + s.WriteIops * Share(s.Volume, true)),
+                Mbps: g.Sum(s => s.ReadMbps * Share(s.Volume, false) + s.WriteMbps * Share(s.Volume, true)))).ToList();
+            var iops = totals.Select(t => t.Iops).Order().ToList();
+            var mbps = totals.Select(t => t.Mbps).Order().ToList();
+            double p95Util = Math.Max(Percentile(iops, 95) / vm.MaxIops.Value, vm.MaxMbps is > 0 ? Percentile(mbps, 95) / vm.MaxMbps.Value : 0);
+            double peakUtil = Math.Max(iops[^1] / vm.MaxIops.Value, vm.MaxMbps is > 0 ? mbps[^1] / vm.MaxMbps.Value : 0);
+            if (peakUtil >= cfg.SaturationPct / 100)
+            {
+                result.Findings.Add(new Finding
+                {
+                    Severity = p95Util >= cfg.SaturationPct / 100 ? Severity.High : Severity.Medium, Category = "Capacity",
+                    Title = $"The VM's own disk limit is being reached ({vm.VmSize})",
+                    Detail = $"Uncached IO peaks at {iops[^1]:N0} IOPS / {mbps[^1]:N0} MB/s (p95 {Percentile(iops, 95):N0} / {Percentile(mbps, 95):N0}) " +
+                             $"against the VM limit of {vm.CapText}. Disks can't deliver more than the VM allows.",
+                    Recommendation = "Move to a VM size with higher uncached disk throughput, or enable ReadOnly host caching on data disks so cached reads no longer count against the limit."
+                });
+            }
+            double provisioned = disks.Values.Where(dc => dc.AzureDisks.Count > 0 && Share(dc.Volume, true) > 0).Sum(dc => dc.MaxIops);
+            if (provisioned > vm.MaxIops * 1.2)
+            {
+                result.Findings.Add(new Finding
+                {
+                    Severity = Severity.Info, Category = "Cost",
+                    Title = $"Disks are provisioned for {provisioned:N0} IOPS but the VM can only drive {vm.MaxIops:N0}",
+                    Detail = $"{vm.VmSize} limits uncached disk IO to {vm.CapText}, whatever the disks are rated for.",
+                    Recommendation = "Either the VM size or the disks are over-specified for each other. Check before buying faster disks."
+                });
+            }
+        }
         result.Findings.Sort((a, b) => b.Severity.CompareTo(a.Severity));
         return result;
     }
+
+    /// <summary>Azure context for a single-disk volume: the next tier up and what it costs.</summary>
+    private static string NextTierHint(DiskConfig? d) =>
+        d is { AzureDisks.Count: 1 } && d.AzureDisks[0].NextTier != "" ? $" Azure: the next size up is {d.AzureDisks[0].NextTierText}." : "";
+
+    private static string ExpandHint(DiskConfig? d) =>
+        d is { AzureDisks.Count: > 0 } ? $" Expandable in Azure: {d.AzureDisks[0].Expandable}" +
+            (d.AzureDisks.Count == 1 && d.AzureDisks[0].NextTier != "" ? $"; next size up {d.AzureDisks[0].NextTierText}." : ".") : "";
 
     private static string Hour(int h) => h < 0 ? "" : $"{h:00}:00–{(h + 1) % 24:00}:00";
 
@@ -140,7 +187,8 @@ public static class Analytics
                     Detail = $"Peak {s.PeakIops:N0} IOPS / {s.PeakMbps:N0} MB/s against provisioned {d.MaxIops:N0} IOPS / {d.MaxMbps:N0} MB/s. " +
                              (s.PeakHour >= 0 ? $"Pressure peaks {Hour(s.PeakHour)}." : ""),
                     Recommendation = "Once a disk hits its cap, IOs queue and latency climbs. Move hot files to another disk, raise provisioned performance, " +
-                                     "or use VM-level caching. Also check the VM's own uncached IOPS/MB/s limit, which can cap sooner than the disk."
+                                     "or use VM-level caching. Also check the VM's own uncached IOPS/MB/s limit, which can cap sooner than the disk." +
+                                     NextTierHint(d)
                 };
             }
 
@@ -196,7 +244,7 @@ public static class Analytics
                     Detail = effective
                         ? $"{space!.FreeGb:N0} GB free on the volume plus {space.FreeInFilesGb ?? 0:N0} GB unused inside its {volFiles.Count} database files."
                         : $"{volFiles.Count} database files on this volume.",
-                    Recommendation = "Plan growth before autogrowth fails. Check the size of the next growth increment against free space."
+                    Recommendation = "Plan growth before autogrowth fails. Check the size of the next growth increment against free space." + ExpandHint(d)
                 };
             }
 

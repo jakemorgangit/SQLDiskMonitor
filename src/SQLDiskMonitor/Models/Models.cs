@@ -18,6 +18,8 @@ public partial class ServerConnection : ObservableObject
     [ObservableProperty] private bool _monitor = true;
     [ObservableProperty] private string _hostName = "";
     [ObservableProperty] private string _version = "";
+    /// <summary>The Azure VM this instance runs on, when linked.</summary>
+    [ObservableProperty] private Services.Azure.AzureVmLink? _azure;
 
     // Runtime state (not persisted)
     [ObservableProperty] private bool _isCollecting;
@@ -58,6 +60,10 @@ public partial class DiskConfig : ObservableObject
     [ObservableProperty] private string _deviceModel = "";
     /// <summary>Free-form, comma-separated tags (e.g. "host cache: ReadOnly, SAN: VNX-02").</summary>
     [ObservableProperty] private string _tags = "";
+    /// <summary>The Azure managed disk(s) behind this volume (several for a storage pool), from the last Azure sync.</summary>
+    [ObservableProperty] private List<Services.Azure.AzureDiskInfo> _azureDisks = [];
+    public bool HasAzure => AzureDisks.Count > 0;
+    partial void OnAzureDisksChanged(List<Services.Azure.AzureDiskInfo> value) => OnPropertyChanged(nameof(HasAzure));
 
     public IReadOnlyList<string> TagList => Tags.Split([",", ";"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     partial void OnTagsChanged(string value) => OnPropertyChanged(nameof(TagList));
