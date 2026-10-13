@@ -10,11 +10,14 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 
 **Disk inventory**
 - Maps every database file to the volume it lives on (drive letters and mount points), with size, used space inside the file, growth settings and max size.
-- Tag each disk by hand with a label, **LUN**, disk number, device model, tier, **max IOPS, max MB/s, burst IOPS and burst MB/s**, provisioned size, cost and free-form **tags** (for example `host cache: ReadOnly, SAN: Pure-02, owner: DBA`).
-- LUNs and tags appear as chips on every disk card. The **Inventory** view on the Disks page lists every disk in one editable grid, with a CSV export.
+- Tag each disk by hand with a label, a **drive name**, a **disk name** (for example the Azure managed disk resource name), **LUN**, disk number, device model, tier, **max IOPS, max MB/s, burst IOPS and burst MB/s**, provisioned size, cost and free-form **tags** (for example `host cache: ReadOnly, SAN: Pure-02, owner: DBA`).
+- Drive and disk names, LUNs and tags appear on every disk card. The **Inventory** view on the Disks page lists every disk in one editable grid, with a CSV export.
 - **Presets** fill in the published limits for Azure Premium SSD P1–P80 (including credit-based burst), Premium SSD v2, Ultra, AWS gp3/io2/st1 and GCP Hyperdisk.
 - **Detect LUNs from host** reads disk numbers, SCSI LUNs and models from the SQL Server host over WMI.
 - **Notes**: a free-text description per disk, plus a timestamped change log ("upgraded to P40", "added tempdb files") that appears as markers on the charts.
+
+**Overview**
+- Disk cards come in three layouts, remembered between launches: **Compact** (four per row, the headline numbers only), **Normal** (full detail) and **List** (one short row per disk).
 
 **Disk pressure score**
 - A 0–100 score per disk per sample. It measures how hard SQL Server is pushing the disk, not hardware health:
@@ -64,6 +67,7 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 | ![Space](docs/screenshots/dark-space.png) **Space and growth** | ![Disks](docs/screenshots/dark-disks.png) **Disk limits, LUN, cost and notes** |
 | ![Bottlenecks](docs/screenshots/dark-bottlenecks.png) **Bottlenecks** | ![Costs](docs/screenshots/dark-costs.png) **Costs** |
 | ![Inventory](docs/screenshots/dark-inventory.png) **Disk inventory, editable in place** | ![Files](docs/screenshots/dark-files.png) **Files** |
+| ![Compact](docs/screenshots/dark-overview-compact.png) **Overview: compact cards** | ![List](docs/screenshots/dark-overview-list.png) **Overview: list layout** |
 | ![Light theme](docs/screenshots/light-overview.png) **Light theme** | ![Light pressure](docs/screenshots/light-pressure.png) **Light theme heatmaps** |
 
 ## Install

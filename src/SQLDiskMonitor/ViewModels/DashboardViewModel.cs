@@ -13,6 +13,7 @@ public partial class DiskCardViewModel : ObservableObject
     public string Label => string.IsNullOrWhiteSpace(Config.Label) ? "Volume" : Config.Label;
     public string LunText => Config.Lun is { } l ? $"LUN {l}" : "";
     public string Tier => Config.Tier;
+    public string Names => Config.NamesText;
 
     [ObservableProperty] private double _pressure;
     [ObservableProperty] private double _iops;
@@ -28,6 +29,9 @@ public partial class DiskCardViewModel : ObservableObject
     [ObservableProperty] private string _spaceTrend = "";
 
     public double UsedGb => TotalGb - FreeGb;
+    public double WorstLatency => Math.Max(ReadLatency, WriteLatency);
+    partial void OnReadLatencyChanged(double value) => OnPropertyChanged(nameof(WorstLatency));
+    partial void OnWriteLatencyChanged(double value) => OnPropertyChanged(nameof(WorstLatency));
     public double UsedPct => TotalGb > 0 ? UsedGb / TotalGb * 100 : 0;
     public string IopsText => Config.MaxIops > 0 ? $"{Iops:N0} / {Config.MaxIops:N0}" : $"{Iops:N0}";
     public string MbpsText => Config.MaxMbps > 0 ? $"{Mbps:N1} / {Config.MaxMbps:N0}" : $"{Mbps:N1}";
@@ -61,6 +65,20 @@ public partial class DashboardViewModel(MainViewModel shell) : PageViewModel(she
     [ObservableProperty] private string _lastSampleText = "";
     [ObservableProperty] private int _databaseCount;
     [ObservableProperty] private int _fileCount;
+
+    public IReadOnlyList<string> Layouts { get; } = ["Compact", "Normal", "List"];
+
+    public string CardLayout
+    {
+        get => Cfg.DashboardLayout;
+        set
+        {
+            if (value == null || value == Cfg.DashboardLayout) return;
+            Cfg.DashboardLayout = value;
+            Cfg.Save();
+            OnPropertyChanged();
+        }
+    }
 
     public bool CostsEnabled => Cfg.CostsEnabled;
     public string Currency => Cfg.CurrencySymbol;

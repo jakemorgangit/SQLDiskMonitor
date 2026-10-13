@@ -81,7 +81,11 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
-                    <ItemsPresenter />
+                    <!-- Scrolls when there are more items than fit (long disk lists, small windows) -->
+                    <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsPresenter />
+                    </ScrollViewer>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

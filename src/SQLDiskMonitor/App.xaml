@@ -37,6 +37,20 @@
                 <Setter Property="CanUserDeleteRows" Value="False" />
                 <Setter Property="SelectionMode" Value="Single" />
                 <Setter Property="FontSize" Value="12.5" />
+                <!-- Theme-aware selection so selected rows stay readable in dark mode -->
+                <Setter Property="CellStyle">
+                    <Setter.Value>
+                        <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource B.AccentSoft}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource B.AccentSoft}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource B.Text}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style x:Key="NumCell" TargetType="TextBlock">
                 <Setter Property="HorizontalAlignment" Value="Right" />

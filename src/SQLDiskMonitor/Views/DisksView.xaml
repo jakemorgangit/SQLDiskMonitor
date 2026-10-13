@@ -65,6 +65,8 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Volume" Binding="{Binding Volume}" IsReadOnly="True" Width="Auto" MinWidth="60" FontWeight="SemiBold" />
                         <DataGridTextColumn Header="Label" Binding="{Binding Label, UpdateSourceTrigger=PropertyChanged}" Width="Auto" MinWidth="60" />
+                        <DataGridTextColumn Header="Drive name" Binding="{Binding DriveName}" Width="Auto" MinWidth="110" />
+                        <DataGridTextColumn Header="Disk name" Binding="{Binding DiskName}" Width="Auto" MinWidth="150" />
                         <DataGridTextColumn Header="LUN" Binding="{Binding Lun, TargetNullValue=''}" Width="Auto" MinWidth="60" />
                         <DataGridTextColumn Header="Disk #" Binding="{Binding DiskNumber, TargetNullValue=''}" Width="Auto" MinWidth="60" />
                         <DataGridTextColumn Header="Device / model" Binding="{Binding DeviceModel}" Width="Auto" MinWidth="60" />
@@ -118,6 +120,8 @@
                                 <TextBlock Style="{StaticResource Caption}" Margin="0,3,0,0">
                                     <Run Text="{Binding Tier, Mode=OneWay}" /> <Run Text="{Binding MaxIops, StringFormat='{}{0:N0} IOPS', Mode=OneWay}" /> · <Run Text="{Binding MaxMbps, StringFormat='{}{0:N0} MB/s', Mode=OneWay}" />
                                 </TextBlock>
+                                <TextBlock Text="{Binding NamesText}" Style="{StaticResource Caption}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding NamesText, Converter={StaticResource HasValue}}" />
                                 <TextBlock Text="{Binding Tags}" Style="{StaticResource Caption}" Foreground="{DynamicResource B.Accent}" Margin="0,3,0,0"
                                            TextTrimming="CharacterEllipsis" Visibility="{Binding Tags, Converter={StaticResource HasValue}}" />
                             </StackPanel>
@@ -162,6 +166,14 @@
                             <StackPanel>
                                 <TextBlock Text="Identity" Style="{StaticResource H2}" Margin="0,0,0,14" />
                                 <UniformGrid Columns="2">
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Drive name" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.DriveName, UpdateSourceTrigger=PropertyChanged}" ToolTip="A friendly name for the drive, e.g. SQL data" />
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}">
+                                        <TextBlock Text="Disk name (e.g. Azure resource name)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SelectedDisk.DiskName, UpdateSourceTrigger=PropertyChanged}" ToolTip="The cloud or SAN name of the underlying disk, e.g. sqlprod01-datadisk-00" />
+                                    </StackPanel>
                                     <StackPanel Style="{StaticResource Field}">
                                         <TextBlock Text="Label" Style="{StaticResource FieldLabel}" />
                                         <TextBox Text="{Binding SelectedDisk.Label, UpdateSourceTrigger=PropertyChanged}" />

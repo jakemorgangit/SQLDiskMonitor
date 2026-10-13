@@ -122,9 +122,9 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
         if (dlg.ShowDialog() != true) return;
         static string C(string s) => MetricsViewModel.Csv(s);
         static string F(double d) => MetricsViewModel.F(d);
-        var sb = new System.Text.StringBuilder("server,volume,label,lun,disk_number,device_model,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,monthly_cost,tags,notes\n");
+        var sb = new System.Text.StringBuilder("server,volume,label,drive_name,disk_name,lun,disk_number,device_model,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,monthly_cost,tags,notes\n");
         foreach (var d in DiskList)
-            sb.AppendLine(string.Join(",", C(Server?.Name ?? ""), C(d.Volume), C(d.Label), d.Lun, d.DiskNumber, C(d.DeviceModel), C(d.Tier), F(d.MaxIops), F(d.MaxMbps),
+            sb.AppendLine(string.Join(",", C(Server?.Name ?? ""), C(d.Volume), C(d.Label), C(d.DriveName), C(d.DiskName), d.Lun, d.DiskNumber, C(d.DeviceModel), C(d.Tier), F(d.MaxIops), F(d.MaxMbps),
                 F(d.BurstIops), F(d.BurstMbps), F(d.SizeGb), F(d.MonthlyCost), C(d.Tags), C(d.Notes.ReplaceLineEndings(" "))));
         System.IO.File.WriteAllText(dlg.FileName, sb.ToString());
         Shell.ShowToast("Exported disk inventory");

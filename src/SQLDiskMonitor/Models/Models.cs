@@ -38,6 +38,10 @@ public partial class DiskConfig : ObservableObject
     public string Volume { get; set; } = "";
 
     [ObservableProperty] private string _label = "";
+    /// <summary>Friendly name for the drive, e.g. "SQL data drive".</summary>
+    [ObservableProperty] private string _driveName = "";
+    /// <summary>Name of the underlying disk, e.g. the Azure managed disk resource name.</summary>
+    [ObservableProperty] private string _diskName = "";
     [ObservableProperty] private int? _lun;
     [ObservableProperty] private string _tier = "";
     [ObservableProperty] private double _maxIops;
@@ -73,6 +77,11 @@ public partial class DiskConfig : ObservableObject
     partial void OnMaxIopsChanged(double value) { OnPropertyChanged(nameof(MonthlyCost)); OnPropertyChanged(nameof(HasLimits)); }
     partial void OnMaxMbpsChanged(double value) { OnPropertyChanged(nameof(MonthlyCost)); OnPropertyChanged(nameof(HasLimits)); }
     partial void OnLabelChanged(string value) => OnPropertyChanged(nameof(DisplayName));
+    partial void OnDriveNameChanged(string value) => OnPropertyChanged(nameof(NamesText));
+    partial void OnDiskNameChanged(string value) => OnPropertyChanged(nameof(NamesText));
+
+    /// <summary>Drive name and disk name together, for compact display.</summary>
+    public string NamesText => string.Join("  ·  ", new[] { DriveName, DiskName }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
 
 public class DiskNote

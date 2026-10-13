@@ -23,6 +23,204 @@
                 </StackPanel>
             </Grid>
         </DataTemplate>
+
+        <!-- Click anywhere on a card to open that disk's settings -->
+        <Style x:Key="DiskCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Margin" Value="0,0,12,12" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <!-- Normal: the full card, two per row -->
+        <DataTemplate x:Key="CardNormal" DataType="{x:Type vm:DiskCardViewModel}">
+            <Border Style="{StaticResource DiskCard}" ToolTip="Open disk settings">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                  Command="{Binding DataContext.OpenDiskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                </Border.InputBindings>
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Style="{StaticResource Chip}" Visibility="{Binding LunText, Converter={StaticResource HasValue}}">
+                                <TextBlock Text="{Binding LunText}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
+                            </Border>
+                            <Border Style="{StaticResource Chip}" Margin="0" Visibility="{Binding Tier, Converter={StaticResource HasValue}}">
+                                <TextBlock Text="{Binding Tier}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock VerticalAlignment="Center">
+                            <Run Text="{Binding Volume, Mode=OneWay}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                            <Run Text="  " /><Run Text="{Binding Label, Mode=OneWay}" FontSize="13" Foreground="{DynamicResource B.TextMuted}" />
+                        </TextBlock>
+                    </DockPanel>
+                    <TextBlock Text="{Binding Names}" Style="{StaticResource Caption}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding Names, Converter={StaticResource HasValue}}" />
+
+                    <ItemsControl ItemsSource="{Binding Config.TagList}" Margin="0,8,0,0"
+                                  Visibility="{Binding Config.Tags, Converter={StaticResource HasValue}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="9" Padding="8,1" Margin="0,0,5,4" Background="{DynamicResource B.AccentSoft}">
+                                    <TextBlock Text="{Binding}" FontSize="10.5" Foreground="{DynamicResource B.Accent}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="118" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <c:PressureGauge Width="104" Height="104" Value="{Binding Pressure}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                        <StackPanel Grid.Column="1" Margin="8,2,0,0">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding IopsText}" FontSize="12" FontWeight="SemiBold" />
+                                <TextBlock Text="IOPS" Style="{StaticResource Muted}" />
+                            </DockPanel>
+                            <c:MeterBar Value="{Binding Iops}" Maximum="{Binding Config.MaxIops}" Burst="{Binding Config.BurstIops}" Margin="0,5,0,11" />
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding MbpsText}" FontSize="12" FontWeight="SemiBold" />
+                                <TextBlock Text="Throughput MB/s" Style="{StaticResource Muted}" />
+                            </DockPanel>
+                            <c:MeterBar Value="{Binding Mbps}" Maximum="{Binding Config.MaxMbps}" Burst="{Binding Config.BurstMbps}" Margin="0,5,0,11" />
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold">
+                                    <Run Text="R" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding ReadLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms  " />
+                                    <Run Text="W" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding WriteLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms" />
+                                </TextBlock>
+                                <TextBlock Text="Latency" Style="{StaticResource Muted}" />
+                            </DockPanel>
+                            <DockPanel Margin="0,10,0,0">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding SpaceText}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
+                                <TextBlock Text="Space" Style="{StaticResource Muted}" />
+                            </DockPanel>
+                            <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" />
+                            <TextBlock Text="{Binding SpaceTrend}" Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,4,0,0"
+                                       Visibility="{Binding SpaceTrend, Converter={StaticResource HasValue}}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Pressure · last 30 minutes" Style="{StaticResource Caption}" Margin="0,14,0,4" />
+                    <c:Sparkline Values="{Binding Spark}" Maximum="100" Height="38" Stroke="{Binding Pressure, Converter={StaticResource PressureBrush}}" />
+                    <DockPanel Margin="0,10,0,0">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding PeakText}" Style="{StaticResource Caption}" />
+                        <TextBlock Text="{Binding FilesSummary}" Style="{StaticResource Caption}" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Compact: gauge plus the headline numbers, four per row -->
+        <DataTemplate x:Key="CardCompact" DataType="{x:Type vm:DiskCardViewModel}">
+            <Border Style="{StaticResource DiskCard}" Padding="14,12" ToolTip="{Binding Config.Tags}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                  Command="{Binding DataContext.OpenDiskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                </Border.InputBindings>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <c:PressureGauge Width="66" Height="66" Thickness="5" Value="{Binding Pressure}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource Chip}" Margin="0" Padding="6,0"
+                                    Visibility="{Binding LunText, Converter={StaticResource HasValue}}">
+                                <TextBlock Text="{Binding LunText}" FontSize="10.5" Foreground="{DynamicResource B.TextMuted}" />
+                            </Border>
+                            <TextBlock TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding Volume, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                                <Run Text="{Binding Label, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
+                            </TextBlock>
+                        </DockPanel>
+                        <TextBlock Text="{Binding Names}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"
+                                   Visibility="{Binding Names, Converter={StaticResource HasValue}}" />
+                        <TextBlock FontSize="12" Margin="0,5,0,0" Foreground="{DynamicResource B.TextMuted}" TextTrimming="CharacterEllipsis">
+                            <Run Text="{Binding Iops, StringFormat=N0, Mode=OneWay}" Foreground="{DynamicResource B.Text}" FontWeight="SemiBold" /><Run Text=" IOPS · " />
+                            <Run Text="{Binding Mbps, StringFormat=N0, Mode=OneWay}" Foreground="{DynamicResource B.Text}" FontWeight="SemiBold" /><Run Text=" MB/s · " />
+                            <Run Text="{Binding WorstLatency, StringFormat=N1, Mode=OneWay}" Foreground="{DynamicResource B.Text}" FontWeight="SemiBold" /><Run Text=" ms" />
+                        </TextBlock>
+                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Height="4" Margin="0,7,0,0" ToolTip="{Binding SpaceText}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- List: one short row per disk, full width -->
+        <DataTemplate x:Key="CardRow" DataType="{x:Type vm:DiskCardViewModel}">
+            <Border Style="{StaticResource DiskCard}" Margin="0,0,12,8" Padding="14,10" ToolTip="{Binding Config.Tags}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                  Command="{Binding DataContext.OpenDiskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                </Border.InputBindings>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="58" />
+                        <ColumnDefinition Width="2.2*" />
+                        <ColumnDefinition Width="1.3*" />
+                        <ColumnDefinition Width="1.3*" />
+                        <ColumnDefinition Width="1*" />
+                        <ColumnDefinition Width="1.4*" />
+                        <ColumnDefinition Width="1.3*" />
+                    </Grid.ColumnDefinitions>
+                    <c:PressureGauge Width="52" Height="52" Thickness="4" Value="{Binding Pressure}" Caption=" " VerticalAlignment="Center" />
+
+                    <StackPanel Grid.Column="1" Margin="10,0,16,0" VerticalAlignment="Center">
+                        <TextBlock TextTrimming="CharacterEllipsis">
+                            <Run Text="{Binding Volume, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
+                            <Run Text="{Binding Label, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
+                            <Run Text="{Binding LunText, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource B.TextSubtle}" />
+                            <Run Text="{Binding Tier, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource B.TextSubtle}" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding Names}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
+                                   Visibility="{Binding Names, Converter={StaticResource HasValue}}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding IopsText}" FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="IOPS" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <c:MeterBar Value="{Binding Iops}" Maximum="{Binding Config.MaxIops}" Burst="{Binding Config.BurstIops}" Margin="0,5,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding MbpsText}" FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="MB/s" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <c:MeterBar Value="{Binding Mbps}" Maximum="{Binding Config.MaxMbps}" Burst="{Binding Config.BurstMbps}" Margin="0,5,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="Latency" Style="{StaticResource Caption}" />
+                        <TextBlock FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0">
+                            <Run Text="R" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding ReadLatency, StringFormat=N1, Mode=OneWay}" />
+                            <Run Text="W" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding WriteLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms" FontWeight="Normal" />
+                        </TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="5" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold">
+                                <Run Text="{Binding FreeGb, StringFormat=N0, Mode=OneWay}" /><Run Text=" GB free" FontWeight="Normal" Foreground="{DynamicResource B.TextMuted}" />
+                            </TextBlock>
+                            <TextBlock Text="Space" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" ToolTip="{Binding SpaceText}" />
+                    </StackPanel>
+
+                    <c:Sparkline Grid.Column="6" Values="{Binding Spark}" Maximum="100" Height="34" VerticalAlignment="Center"
+                                 Stroke="{Binding Pressure, Converter={StaticResource PressureBrush}}" ToolTip="Pressure, last 30 minutes" />
+                </Grid>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>
@@ -101,8 +299,10 @@
                 </UniformGrid>
 
                 <DockPanel Margin="2,8,0,10">
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding LastSampleText}" Style="{StaticResource Caption}" VerticalAlignment="Bottom" />
-                    <TextBlock Style="{StaticResource H2}">
+                    <ListBox DockPanel.Dock="Right" ItemsSource="{Binding Layouts}" SelectedItem="{Binding CardLayout}"
+                             Style="{StaticResource SegmentList}" Margin="14,0,0,0" ToolTip="Disk card layout" />
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding LastSampleText}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                    <TextBlock Style="{StaticResource H2}" VerticalAlignment="Center">
                         <Run Text="Disks" /><Run Text="  " /><Run Text="{Binding DatabaseCount, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text=" databases · " FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text="{Binding FileCount, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" /><Run Text=" files" FontWeight="Normal" Foreground="{DynamicResource B.TextSubtle}" FontSize="12" />
                     </TextBlock>
                 </DockPanel>
@@ -111,95 +311,40 @@
                            Text="Waiting for the first samples. Pressure needs two snapshots, so the first figures appear after one collection interval." />
 
                 <ItemsControl ItemsSource="{Binding Cards}" Margin="0,0,-12,0">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="2" VerticalAlignment="Top" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:DiskCardViewModel}">
-                            <Border Style="{StaticResource Card}" Margin="0,0,12,12" Cursor="Hand" ToolTip="Open disk settings">
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick"
-                                                  Command="{Binding DataContext.OpenDiskCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                  CommandParameter="{Binding}" />
-                                </Border.InputBindings>
-                                <StackPanel>
-                                    <DockPanel>
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Border Style="{StaticResource Chip}" Visibility="{Binding LunText, Converter={StaticResource HasValue}}">
-                                                <TextBlock Text="{Binding LunText}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
-                                            </Border>
-                                            <Border Style="{StaticResource Chip}" Margin="0" Visibility="{Binding Tier, Converter={StaticResource HasValue}}">
-                                                <TextBlock Text="{Binding Tier}" FontSize="11" Foreground="{DynamicResource B.TextMuted}" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock VerticalAlignment="Center">
-                                            <Run Text="{Binding Volume, Mode=OneWay}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource B.Text}" />
-                                            <Run Text="  " /><Run Text="{Binding Label, Mode=OneWay}" FontSize="13" Foreground="{DynamicResource B.TextMuted}" />
-                                        </TextBlock>
-                                    </DockPanel>
-
-                                    <ItemsControl ItemsSource="{Binding Config.TagList}" Margin="0,8,0,0"
-                                                  Visibility="{Binding Config.Tags, Converter={StaticResource HasValue}}">
-                                        <ItemsControl.ItemsPanel>
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="ItemTemplate" Value="{StaticResource CardNormal}" />
+                            <Setter Property="ItemsPanel">
+                                <Setter.Value>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" VerticalAlignment="Top" />
+                                    </ItemsPanelTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CardLayout}" Value="Compact">
+                                    <Setter Property="ItemTemplate" Value="{StaticResource CardCompact}" />
+                                    <Setter Property="ItemsPanel">
+                                        <Setter.Value>
                                             <ItemsPanelTemplate>
-                                                <WrapPanel />
+                                                <UniformGrid Columns="4" VerticalAlignment="Top" />
                                             </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border CornerRadius="9" Padding="8,1" Margin="0,0,5,4" Background="{DynamicResource B.AccentSoft}">
-                                                    <TextBlock Text="{Binding}" FontSize="10.5" Foreground="{DynamicResource B.Accent}" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <Grid Margin="0,14,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="118" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <c:PressureGauge Width="104" Height="104" Value="{Binding Pressure}" HorizontalAlignment="Left" VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Margin="8,2,0,0">
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding IopsText}" FontSize="12" FontWeight="SemiBold" />
-                                                <TextBlock Text="IOPS" Style="{StaticResource Muted}" />
-                                            </DockPanel>
-                                            <c:MeterBar Value="{Binding Iops}" Maximum="{Binding Config.MaxIops}" Burst="{Binding Config.BurstIops}" Margin="0,5,0,11" />
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding MbpsText}" FontSize="12" FontWeight="SemiBold" />
-                                                <TextBlock Text="Throughput MB/s" Style="{StaticResource Muted}" />
-                                            </DockPanel>
-                                            <c:MeterBar Value="{Binding Mbps}" Maximum="{Binding Config.MaxMbps}" Burst="{Binding Config.BurstMbps}" Margin="0,5,0,11" />
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold">
-                                                    <Run Text="R" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding ReadLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms  " />
-                                                    <Run Text="W" Foreground="{DynamicResource B.TextSubtle}" FontWeight="Normal" /> <Run Text="{Binding WriteLatency, StringFormat=N1, Mode=OneWay}" /><Run Text=" ms" />
-                                                </TextBlock>
-                                                <TextBlock Text="Latency" Style="{StaticResource Muted}" />
-                                            </DockPanel>
-                                            <DockPanel Margin="0,10,0,0">
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding SpaceText}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
-                                                <TextBlock Text="Space" Style="{StaticResource Muted}" />
-                                            </DockPanel>
-                                            <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" />
-                                            <TextBlock Text="{Binding SpaceTrend}" Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,4,0,0"
-                                                       Visibility="{Binding SpaceTrend, Converter={StaticResource HasValue}}" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <TextBlock Text="Pressure · last 30 minutes" Style="{StaticResource Caption}" Margin="0,14,0,4" />
-                                    <c:Sparkline Values="{Binding Spark}" Maximum="100" Height="38" Stroke="{Binding Pressure, Converter={StaticResource PressureBrush}}" />
-                                    <DockPanel Margin="0,10,0,0">
-                                        <TextBlock DockPanel.Dock="Right" Text="{Binding PeakText}" Style="{StaticResource Caption}" />
-                                        <TextBlock Text="{Binding FilesSummary}" Style="{StaticResource Caption}" />
-                                    </DockPanel>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding CardLayout}" Value="List">
+                                    <Setter Property="ItemTemplate" Value="{StaticResource CardRow}" />
+                                    <Setter Property="ItemsPanel">
+                                        <Setter.Value>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel />
+                                            </ItemsPanelTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
                 </ItemsControl>
 
                 <Border Style="{StaticResource Card}" Margin="0,4,0,0" Visibility="{Binding TopFindings.Count, Converter={StaticResource HasValue}}">
