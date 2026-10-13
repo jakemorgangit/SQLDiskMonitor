@@ -35,13 +35,21 @@ public class AzureClient
     private readonly TokenCredential _credential;
     private readonly AppSettings _cfg;
     private Dictionary<string, string>? _subscriptions;
+    private readonly string? _tenantProblem;
+
+    private void CheckTenant()
+    {
+        if (_tenantProblem != null) throw new InvalidOperationException(_tenantProblem);
+    }
 
     private static string RecordPath => Path.Combine(AppSettings.DataFolder, "azure-auth.json");
 
     public AzureClient(AppSettings cfg)
     {
         _cfg = cfg;
-        var tenant = string.IsNullOrWhiteSpace(cfg.AzureTenantId) ? null : cfg.AzureTenantId.Trim();
+        // A bad tenant is reported when the client is first used, so windows can still open.
+        _tenantProblem = ValidateTenant(cfg.AzureTenantId);
+        var tenant = string.IsNullOrWhiteSpace(cfg.AzureTenantId) || _tenantProblem != null ? null : cfg.AzureTenantId.Trim();
         if (cfg.AzureAuth == "AzureCli")
         {
             _credential = new AzureCliCredential(new AzureCliCredentialOptions { TenantId = tenant });
@@ -84,6 +92,7 @@ public class AzureClient
     /// <summary>Signs in (browser) or checks the Azure CLI login. Returns the account name.</summary>
     public async Task<string> SignInAsync(CancellationToken ct = default)
     {
+        CheckTenant();
         if (_credential is InteractiveBrowserCredential browser)
         {
             var record = await browser.AuthenticateAsync(new TokenRequestContext(Scopes), ct);
@@ -111,6 +120,7 @@ public class AzureClient
 
     private async Task<JsonDocument> SendAsync(HttpMethod method, string url, object? body, CancellationToken ct)
     {
+        CheckTenant();
         var token = await _credential.GetTokenAsync(new TokenRequestContext(Scopes), ct);
         using var req = new HttpRequestMessage(method, url.StartsWith("http") ? url : Arm + url);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
@@ -306,6 +316,54 @@ public class AzureClient
         var s when s.Length == 3 && s.All(char.IsLetter) => s.ToUpperInvariant(),
         _ => "USD"
     };
+
+    public record AzureTenant(string Id, string Name, string Domain)
+    {
+        public override string ToString() => string.IsNullOrEmpty(Domain) ? $"{Name}  ({Id})" : $"{Name}  ({Domain})";
+    }
+
+    /// <summary>
+    /// A tenant must be a GUID or a domain (contoso.onmicrosoft.com, contoso.com). Display names such as "Contoso" are rejected
+    /// with an explanation rather than sent to Azure. Returns null when the value is fine (blank means the default tenant).
+    /// </summary>
+    public static string? ValidateTenant(string? tenant)
+    {
+        var t = tenant?.Trim() ?? "";
+        if (t.Length == 0 || Guid.TryParse(t, out _)) return null;
+        if (t.Contains('.') && !t.Contains(' ') && !t.Contains('/')) return null;
+        return $"'{t}' isn't a tenant ID. Use the tenant's GUID or a domain such as {t.ToLowerInvariant().Replace(" ", "")}.onmicrosoft.com, " +
+               "or leave it blank to use your default tenant. After signing in you can pick from your tenants.";
+    }
+
+    /// <summary>A one-line explanation from an Azure or Azure CLI error, without stack traces.</summary>
+    public static string FriendlyError(Exception ex)
+    {
+        var text = ex.Message;
+        var aad = System.Text.RegularExpressions.Regex.Match(text, @"AADSTS\d+:[^.\r\n]*\.?");
+        if (aad.Success) return aad.Value.Trim();
+        if (text.Contains("az login", StringComparison.OrdinalIgnoreCase) || text.Contains("Please run 'az login'", StringComparison.OrdinalIgnoreCase))
+            return "The Azure CLI isn't signed in. Run az login in a terminal, then try again.";
+        if (text.Contains("Azure CLI not installed", StringComparison.OrdinalIgnoreCase))
+            return "The Azure CLI isn't installed. Install it, or use browser sign-in instead.";
+        var cut = text.IndexOfAny(['\r', '\n']);
+        if (cut > 0) text = text[..cut];
+        foreach (var marker in new[] { " See the troubleshooting guide", " Traceback", " ERROR:" })
+        {
+            var i = text.IndexOf(marker, StringComparison.Ordinal);
+            if (i > 20) text = text[..i];
+        }
+        return text.Length > 300 ? text[..300] + "…" : text;
+    }
+
+    /// <summary>Tenants the signed-in account belongs to.</summary>
+    public async Task<List<AzureTenant>> GetTenantsAsync(CancellationToken ct = default)
+    {
+        var result = new List<AzureTenant>();
+        using var doc = await SendAsync(HttpMethod.Get, "/tenants?api-version=2022-12-01", null, ct);
+        foreach (var t in doc.RootElement.GetProperty("value").EnumerateArray())
+            result.Add(new AzureTenant(Str(t, "tenantId"), Str(t, "displayName") is { Length: > 0 } n ? n : Str(t, "tenantId"), Str(t, "defaultDomain")));
+        return result.OrderBy(t => t.Name).ToList();
+    }
 
     private static string Str(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";

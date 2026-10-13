@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="72" align="left" alt="" />
+
 # SQL Disk Monitor
 
 A Windows desktop tool for DBAs that shows how hard SQL Server is working its storage: which disk every database file is on, how close each disk is to its provisioned IOPS and throughput, when in the day the pressure builds, how fast space is running out, and what the storage costs.

@@ -81,8 +81,8 @@ public partial class AzureSyncViewModel : ObservableObject
         catch (Exception ex)
         {
             Status = ex is global::Azure.Identity.AuthenticationFailedException or global::Azure.Identity.CredentialUnavailableException
-                ? $"Sign-in failed: {ex.Message}"
-                : ex.Message;
+                ? $"Sign-in failed: {AzureClient.FriendlyError(ex)}"
+                : AzureClient.FriendlyError(ex);
         }
         finally
         {

@@ -177,15 +177,18 @@
                             <ListBox ItemsSource="{Binding AzureAuthModes}" SelectedItem="{Binding AzureAuthMode}" Style="{StaticResource SegmentList}" HorizontalAlignment="Left" />
                             <StackPanel Style="{StaticResource Field}" Margin="0,12,0,10">
                                 <TextBlock Text="Tenant ID or domain (optional)" Style="{StaticResource FieldLabel}" />
-                                <TextBox Text="{Binding AzureTenant}" />
+                                <TextBox Text="{Binding AzureTenant, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Text="A GUID or a domain such as contoso.onmicrosoft.com, not the display name. Leave blank to use your default tenant." />
+                                <ComboBox ItemsSource="{Binding Tenants}" SelectedItem="{Binding SelectedTenant}" Margin="0,8,0,0"
+                                          Visibility="{Binding Tenants.Count, Converter={StaticResource HasValue}}" ToolTip="Pick one of your tenants" />
                             </StackPanel>
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <Button Style="{StaticResource GhostButton}" Content="Sign out" Command="{Binding SignOutAzureCommand}" Margin="0,0,6,0" />
-                                    <Button Style="{StaticResource SoftButton}" Content="Sign in" Command="{Binding SignInAzureCommand}" />
-                                </StackPanel>
-                                <TextBlock Text="{Binding AzureStatus}" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource GhostButton}" Content="Sign out" Command="{Binding SignOutAzureCommand}" Margin="0,0,6,0" />
+                                <Button Style="{StaticResource SoftButton}" Content="Sign in" Command="{Binding SignInAzureCommand}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding AzureStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0" MaxHeight="80"
+                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding AzureStatus}" />
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
                                        Text="Used by Disks › Sync from Azure to read VM disks, tiers, limits and prices. Read-only; Reader on the VM's subscription or resource group is enough. Browser sign-in is cached on this PC; Azure CLI reuses az login." />
                         </StackPanel>

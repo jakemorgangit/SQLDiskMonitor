@@ -350,6 +350,25 @@ public class AzureTests
         Assert.Equal("P30", d2.AzureDisks[0].Tier);
     }
 
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("72f988bf-86f1-41af-91ab-2d7cd011db47", true)]
+    [InlineData("ticketer.onmicrosoft.com", true)]
+    [InlineData("ticketer.com", true)]
+    [InlineData("Ticketer", false)]
+    [InlineData("Ticketer Ltd", false)]
+    public void Tenant_must_be_a_guid_or_domain(string tenant, bool ok) =>
+        Assert.Equal(ok, AzureClient.ValidateTenant(tenant) == null);
+
+    [Fact]
+    public void Friendly_error_keeps_the_azure_message_and_drops_the_traceback()
+    {
+        var cli = new Exception("Azure CLI authentication failed due to an unknown error. See the troubleshooting guide for more information. " +
+            "ERROR: ... HTTP status: 400, Error: {\"error\":\"invalid_tenant\",\"error_description\":\"AADSTS90002: Tenant 'ticketer' not found. Check to make sure you have the correct tenant ID\"}\nTraceback (most recent call last):\n  File ...");
+        Assert.Equal("AADSTS90002: Tenant 'ticketer' not found.", AzureClient.FriendlyError(cli));
+        Assert.Equal("Something broke", AzureClient.FriendlyError(new Exception("Something broke\nTraceback (most recent call last): ...")));
+    }
+
     /// <summary>Uses the public Azure retail price API (no sign-in). Runs when SQLDM_TEST_NETWORK=1.</summary>
     [Fact]
     public async Task Retail_price_lookup_returns_monthly_disk_price()
