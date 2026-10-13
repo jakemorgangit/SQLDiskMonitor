@@ -34,6 +34,17 @@ public class AppSettings
     /// <summary>Capacity % at which a disk is considered saturated.</summary>
     public double SaturationPct { get; set; } = 90;
 
+    /// <summary>Whether free space feeds findings and space colouring at all.</summary>
+    public bool SpaceInHealth { get; set; } = true;
+    /// <summary>Treat unused space inside database files as headroom (pre-sized files grow internally).</summary>
+    public bool CountFileFreeSpace { get; set; } = true;
+    /// <summary>Free space % below which a disk is flagged (High below 2/3 of this, Critical below 1/3).</summary>
+    public double SpaceWarnPct { get; set; } = 15;
+
+    /// <summary>The free % that counts for health: effective (volume + inside files) or plain volume free space.</summary>
+    public double HealthFreePct(Services.VolumeSpace? v, double volumeFreePct) =>
+        CountFileFreeSpace && v != null ? v.EffectiveFreePct : volumeFreePct;
+
     public long LastServerId { get; set; }
     /// <summary>Overview disk card layout: Compact, Normal or List.</summary>
     public string DashboardLayout { get; set; } = "Normal";

@@ -37,6 +37,20 @@
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <ListBox ItemsSource="{Binding ViewModes}" SelectedItem="{Binding ViewMode}" Style="{StaticResource SegmentList}" />
+            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Command="{Binding SaveCsvTemplateCommand}" Margin="8,0,0,0"
+                    ToolTip="Save a CSV with the column headers the import understands, one row per volume">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="CSV template" />
+                </StackPanel>
+            </Button>
+            <Button DockPanel.Dock="Right" Style="{StaticResource SoftButton}" Command="{Binding ImportCsvCommand}" Margin="8,0,0,0"
+                    ToolTip="Fill empty disk settings from a CSV file. The first column (or a Volume column) is the drive letter.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8B5;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Import CSV" />
+                </StackPanel>
+            </Button>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsDetails, Converter={StaticResource BoolToVisInv}}">
                 <TextBlock Text="Unsaved changes" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,12,0"
                            Foreground="{DynamicResource B.Warn}" Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />

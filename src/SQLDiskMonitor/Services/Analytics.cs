@@ -180,14 +180,22 @@ public static class Analytics
                 };
             }
 
-            // 5. Free space
-            if (s.TotalGb > 0 && s.FreePct < 15)
+            // 5. Free space (optional; effective free space counts unused space inside the data files)
+            var space = r.Space.Volumes.FirstOrDefault(v => v.Volume == s.Volume);
+            double freePct = cfg.HealthFreePct(space, s.FreePct);
+            if (cfg.SpaceInHealth && s.TotalGb > 0 && freePct < cfg.SpaceWarnPct)
             {
+                bool effective = cfg.CountFileFreeSpace && space != null;
                 yield return new Finding
                 {
-                    Severity = s.FreePct < 5 ? Severity.Critical : s.FreePct < 10 ? Severity.High : Severity.Low, Category = "Space", Volume = s.Volume,
-                    Title = $"{name} has {s.FreePct:N1}% free ({s.FreeGb:N0} of {s.TotalGb:N0} GB)",
-                    Detail = $"{volFiles.Count} database files on this volume.",
+                    Severity = freePct < cfg.SpaceWarnPct / 3 ? Severity.Critical : freePct < cfg.SpaceWarnPct / 1.5 ? Severity.High : Severity.Low,
+                    Category = "Space", Volume = s.Volume,
+                    Title = effective
+                        ? $"{name} has {freePct:N1}% headroom left ({space!.EffectiveFreeGb:N0} of {s.TotalGb:N0} GB)"
+                        : $"{name} has {freePct:N1}% free ({s.FreeGb:N0} of {s.TotalGb:N0} GB)",
+                    Detail = effective
+                        ? $"{space!.FreeGb:N0} GB free on the volume plus {space.FreeInFilesGb ?? 0:N0} GB unused inside its {volFiles.Count} database files."
+                        : $"{volFiles.Count} database files on this volume.",
                     Recommendation = "Plan growth before autogrowth fails. Check the size of the next growth increment against free space."
                 };
             }
@@ -239,15 +247,19 @@ public static class Analytics
             }
         }
 
-        // Capacity forecast from the used-space trend
-        foreach (var v in r.Space.Volumes.Where(v => v.DaysToFull is < 120))
+        // Capacity forecast. With file free space counted, it follows data growth inside the files against effective headroom.
+        foreach (var v in r.Space.Volumes)
         {
-            var days = v.DaysToFull!.Value;
+            if (!cfg.SpaceInHealth) break;
+            bool effective = cfg.CountFileFreeSpace;
+            if ((effective ? v.EffectiveDaysToFull : v.DaysToFull) is not { } days || days >= 120) continue;
             yield return new Finding
             {
                 Severity = days < 7 ? Severity.Critical : days < 30 ? Severity.High : Severity.Medium, Category = "Space", Volume = v.Volume,
                 Title = $"{(disks.GetValueOrDefault(v.Volume)?.DisplayName ?? v.Volume)} is on course to fill in about {days:N0} days",
-                Detail = $"Used space is growing {v.GrowthText} with {v.FreeGb:N0} GB free ({v.FreePct:N1}%).",
+                Detail = effective
+                    ? $"Data inside the files is growing {v.DataGrowthText}, with {v.EffectiveFreeGb:N0} GB of headroom ({v.FreeGb:N0} GB on the volume + {v.FreeInFilesGb ?? 0:N0} GB inside files)."
+                    : $"Used space is growing {v.GrowthText} with {v.FreeGb:N0} GB free ({v.FreePct:N1}%).",
                 Recommendation = "Extend the disk or move growing files before then. The Space page shows which databases are growing."
             };
         }

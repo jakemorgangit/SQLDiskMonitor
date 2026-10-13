@@ -99,7 +99,7 @@
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding SpaceText}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" />
                                 <TextBlock Text="Space" Style="{StaticResource Muted}" />
                             </DockPanel>
-                            <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" />
+                            <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Fill="{Binding SpaceFill}" Margin="0,5,0,0" />
                             <TextBlock Text="{Binding SpaceTrend}" Style="{StaticResource Caption}" HorizontalAlignment="Right" Margin="0,4,0,0"
                                        Visibility="{Binding SpaceTrend, Converter={StaticResource HasValue}}" />
                         </StackPanel>
@@ -146,7 +146,7 @@
                             <Run Text="{Binding Mbps, StringFormat=N0, Mode=OneWay}" Foreground="{DynamicResource B.Text}" FontWeight="SemiBold" /><Run Text=" MB/s · " />
                             <Run Text="{Binding WorstLatency, StringFormat=N1, Mode=OneWay}" Foreground="{DynamicResource B.Text}" FontWeight="SemiBold" /><Run Text=" ms" />
                         </TextBlock>
-                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Height="4" Margin="0,7,0,0" ToolTip="{Binding SpaceText}" />
+                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Fill="{Binding SpaceFill}" Height="4" Margin="0,7,0,0" ToolTip="{Binding SpaceText}" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -213,7 +213,7 @@
                             </TextBlock>
                             <TextBlock Text="Space" Style="{StaticResource Caption}" VerticalAlignment="Center" />
                         </DockPanel>
-                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Margin="0,5,0,0" ToolTip="{Binding SpaceText}" />
+                        <c:MeterBar Value="{Binding UsedPct}" Maximum="100" Fill="{Binding SpaceFill}" Margin="0,5,0,0" ToolTip="{Binding SpaceText}" />
                     </StackPanel>
 
                     <c:Sparkline Grid.Column="6" Values="{Binding Spark}" Maximum="100" Height="34" VerticalAlignment="Center"

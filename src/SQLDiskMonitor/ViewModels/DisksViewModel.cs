@@ -112,6 +112,58 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
     }
 
     [RelayCommand]
+    private void SaveCsvTemplate()
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "CSV (*.csv)|*.csv",
+            Title = "Save disk settings template",
+            FileName = $"{MetricsViewModel.Sanitise(Server?.Name ?? "server")}_disk_settings_template.csv"
+        };
+        if (dlg.ShowDialog() != true) return;
+        System.IO.File.WriteAllText(dlg.FileName, DiskCsvImport.BuildTemplate(DiskList), new System.Text.UTF8Encoding(true));
+        Shell.ShowToast("Template saved. Fill in the blanks, then use Import CSV.");
+    }
+
+    [RelayCommand]
+    private void ImportCsv()
+    {
+        if (Server == null || DiskList.Count == 0) { Shell.ShowToast("No disks to import into yet"); return; }
+        var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "CSV files (*.csv;*.txt)|*.csv;*.txt|All files (*.*)|*.*", Title = "Import disk settings" };
+        if (dlg.ShowDialog() != true) return;
+
+        string text;
+        try
+        {
+            // Allow reading a file that is still open in Excel.
+            using var fs = new System.IO.FileStream(dlg.FileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
+            using var reader = new System.IO.StreamReader(fs);
+            text = reader.ReadToEnd();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Could not read the file:\n\n{ex.Message}", "Import disk settings", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        var r = DiskCsvImport.Apply(text, DiskList);
+        foreach (var d in r.Changed) Store.SaveDisk(d);
+        IsDirty = false;
+        OnSelectedDiskChanged(SelectedDisk);
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(r.FieldsFilled > 0
+            ? $"Filled {r.FieldsFilled} empty field(s) on {r.Changed.Count} disk(s). Existing values were left unchanged."
+            : r.RowsMatched > 0 ? "Matched rows found, but every field they contain is already filled in. Nothing changed." : "No rows matched a disk on this server.");
+        if (r.Details.Count > 0) { sb.AppendLine(); foreach (var line in r.Details) sb.AppendLine("  " + line); }
+        if (r.UnmatchedRows.Count > 0) { sb.AppendLine(); sb.AppendLine($"No matching disk for: {string.Join(", ", r.UnmatchedRows)}"); }
+        if (r.RecognisedColumns.Count == 0) { sb.AppendLine(); sb.AppendLine("No recognised columns. Use headers such as Label, Drive name, Disk name, LUN, Tier, Max IOPS, Max MB/s, Size GB, Tags, Notes."); }
+        else if (r.IgnoredColumns.Count > 0) { sb.AppendLine(); sb.AppendLine($"Ignored columns: {string.Join(", ", r.IgnoredColumns)}"); }
+        System.Windows.MessageBox.Show(sb.ToString(), "Import disk settings", System.Windows.MessageBoxButton.OK,
+            r.FieldsFilled > 0 ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+    }
+
+    [RelayCommand]
     private void ExportInventory()
     {
         var dlg = new Microsoft.Win32.SaveFileDialog

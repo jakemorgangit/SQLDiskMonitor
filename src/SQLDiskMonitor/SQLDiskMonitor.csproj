@@ -19,7 +19,7 @@
     <Authors>Jake Morgan</Authors>
     <Copyright>© 2026 Blackcat Data Solutions Ltd</Copyright>
     <Description>SQL Server storage performance, pressure and cost analysis. https://blackcat.wales</Description>
-    <Version>2.0.0</Version>
+    <Version>2.2.0</Version>
 
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>

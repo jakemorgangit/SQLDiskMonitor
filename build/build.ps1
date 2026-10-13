@@ -1,6 +1,6 @@
 # Builds the self-contained app and the MSI into ./artifacts.
 # Usage: pwsh build/build.ps1 [-Version 2.0.0]
-param([string]$Version = "2.0.0")
+param([string]$Version = "2.2.0")
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent

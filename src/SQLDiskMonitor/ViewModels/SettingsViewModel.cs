@@ -34,6 +34,9 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
     [ObservableProperty] private double _logCrit;
     [ObservableProperty] private double _minIops;
     [ObservableProperty] private double _saturation;
+    [ObservableProperty] private bool _spaceInHealth;
+    [ObservableProperty] private bool _countFileFreeSpace;
+    [ObservableProperty] private double _spaceWarnPct;
     [ObservableProperty] private string _storageInfo = "";
 
     public string DataFolder => AppSettings.DataFolder;
@@ -62,6 +65,7 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
         DataGood = s.DataLatencyGood; DataWarn = s.DataLatencyWarn; DataCrit = s.DataLatencyCritical;
         LogGood = s.LogLatencyGood; LogWarn = s.LogLatencyWarn; LogCrit = s.LogLatencyCritical;
         MinIops = s.MinIopsForLatency; Saturation = s.SaturationPct;
+        SpaceInHealth = s.SpaceInHealth; CountFileFreeSpace = s.CountFileFreeSpace; SpaceWarnPct = s.SpaceWarnPct;
         StorageInfo = $"History database: {Store.DatabaseSizeBytes() / 1048576.0:N1} MB";
         _loading = false;
     }
@@ -103,13 +107,16 @@ public partial class SettingsViewModel(MainViewModel shell) : PageViewModel(shel
         s.LogLatencyGood = LogGood; s.LogLatencyWarn = Math.Max(LogWarn, LogGood + 0.1); s.LogLatencyCritical = Math.Max(LogCrit, s.LogLatencyWarn + 0.1);
         s.MinIopsForLatency = Math.Max(0, MinIops);
         s.SaturationPct = Math.Clamp(Saturation, 10, 100);
+        s.SpaceInHealth = SpaceInHealth;
+        s.CountFileFreeSpace = CountFileFreeSpace;
+        s.SpaceWarnPct = Math.Clamp(SpaceWarnPct, 1, 50);
         s.Save();
         ApplyStartup(s.StartWithWindows);
         Shell.Costs.IsVisible = s.CostsEnabled;
         if (intervalChanged)
             foreach (var srv in Shell.Servers.Where(x => Shell.Collector.IsRunning(x.Id))) Shell.Collector.Restart(srv);
         Reload();
-        Shell.ShowToast("Settings saved. New thresholds apply to samples collected from now on.");
+        Shell.ShowToast("Settings saved. Latency thresholds apply to new samples; space alerts apply straight away.");
     }
 
     private static void ApplyStartup(bool enabled)

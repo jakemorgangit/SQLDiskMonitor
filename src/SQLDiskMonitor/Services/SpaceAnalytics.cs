@@ -18,6 +18,17 @@ public class VolumeSpace
     public double? DaysToFull => GrowthGbPerDay is > 0.01 ? FreeGb / GrowthGbPerDay : null;
     public double AllocatedGb { get; init; }
     public double? UsedInFilesGb { get; init; }
+    /// <summary>Space allocated to database files but not yet used inside them.</summary>
+    public double? FreeInFilesGb => UsedInFilesGb is { } u ? Math.Max(0, AllocatedGb - u) : null;
+    /// <summary>Volume free space plus unused space inside the database files on it.</summary>
+    public double EffectiveFreeGb => FreeGb + (FreeInFilesGb ?? 0);
+    public double EffectiveFreePct => TotalGb > 0 ? EffectiveFreeGb / TotalGb * 100 : 0;
+    public double EffectiveUsedPct => 100 - EffectiveFreePct;
+    /// <summary>Growth of data actually written inside the files (not file autogrowth); null when unknown.</summary>
+    public double? DataGrowthGbPerDay { get; init; }
+    public double? EffectiveDaysToFull => DataGrowthGbPerDay is > 0.01 ? EffectiveFreeGb / DataGrowthGbPerDay : null;
+    public string DataGrowthText => DataGrowthGbPerDay is { } g ? $"{(g >= 0 ? "+" : "")}{g:N2} GB/day" : "—";
+    public string EffectiveDaysToFullText => EffectiveDaysToFull is { } d ? d > 3650 ? "> 10 years" : $"{d:N0} days" : "Not growing";
     public int FileCount { get; init; }
     public List<(DateTime T, double UsedGb, double TotalGb)> Series { get; init; } = [];
     public string GrowthText => GrowthGbPerDay is { } g ? $"{(g >= 0 ? "+" : "")}{g:N2} GB/day" : "—";
@@ -102,6 +113,9 @@ public static class SpaceAnalytics
             var last = pts[^1];
             disks.TryGetValue(g.Key, out var d);
             var volFiles = files.Where(f => f.Volume.Equals(g.Key, StringComparison.OrdinalIgnoreCase)).ToList();
+            // Log usage cycles up and down with backups and checkpoints, so only data files count towards growth.
+            var dataRates = volFiles.Where(f => !f.IsLog)
+                .Select(f => growth.GetValueOrDefault((f.DatabaseId, f.FileId))?.UsedMbPerDay).OfType<double>().ToList();
             volumes.Add(new VolumeSpace
             {
                 Volume = g.Key, Label = d?.Label ?? "", Lun = d?.Lun,
@@ -109,6 +123,7 @@ public static class SpaceAnalytics
                 GrowthGbPerDay = Slope(pts.Select(p => (p.Timestamp, p.TotalGb - p.FreeGb)).ToList()),
                 AllocatedGb = volFiles.Sum(f => f.SizeMb) / 1024,
                 UsedInFilesGb = volFiles.Any(f => f.UsedMb != null) ? volFiles.Sum(f => f.UsedMb ?? f.SizeMb) / 1024 : null,
+                DataGrowthGbPerDay = dataRates.Count > 0 ? dataRates.Sum() / 1024 : null,
                 FileCount = volFiles.Count,
                 Series = pts.Select(p => (p.Timestamp, p.TotalGb - p.FreeGb, p.TotalGb)).ToList()
             });
