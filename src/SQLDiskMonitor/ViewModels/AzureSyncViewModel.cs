@@ -28,6 +28,14 @@ public partial class AzureSyncViewModel : ObservableObject
     private readonly IReadOnlyDictionary<string, double> _volumeSizes;
     private AzureClient _client;
     private AzureVmDetail? _detail;
+    private readonly Dictionary<string, DiskConfig> _volumeByOption;
+
+    private string Option(DiskConfig v)
+    {
+        var size = _volumeSizes.TryGetValue(v.Volume, out var gb) && gb > 0 ? $" · {gb:N0} GB" : "";
+        var name = string.IsNullOrWhiteSpace(v.Label) ? v.DriveName : v.Label;
+        return string.IsNullOrWhiteSpace(name) ? v.Volume + size : $"{v.Volume}  {name}{size}";
+    }
 
     public ObservableCollection<AzureVm> Vms { get; } = [];
     public ICollectionView VmView { get; }
@@ -61,7 +69,9 @@ public partial class AzureSyncViewModel : ObservableObject
         _store = store; _cfg = cfg; _server = server; _volumes = volumes; _volumeSizes = volumeSizes;
         _client = new AzureClient(cfg);
         _setCosts = cfg.CostsEnabled;
-        VolumeOptions = [NotUsed, .. volumes.Select(v => v.Volume)];
+        // Dropdown entries show the label and size so volumes are easy to tell apart; Apply maps them back.
+        _volumeByOption = volumes.ToDictionary(v => Option(v), v => v);
+        VolumeOptions = [NotUsed, .. _volumeByOption.Keys];
         ResourceId = server.Azure?.VmId ?? "";
         Account = cfg.AzureAuth == "AzureCli" ? "Using your Azure CLI sign-in (az login)" : AzureClient.SignedInAccount() is { } a ? $"Signed in as {a}" : "Not signed in";
         VmView = CollectionViewSource.GetDefaultView(Vms);
@@ -144,14 +154,18 @@ public partial class AzureSyncViewModel : ObservableObject
         _detail = detail;
         Rows.Clear();
         foreach (var m in AzureSync.Suggest(infos, _volumes, _volumeSizes))
-            Rows.Add(new DiskMatchRow { Disk = m.Disk, Volume = m.Volume ?? NotUsed, Reason = m.Reason });
+            Rows.Add(new DiskMatchRow
+            {
+                Disk = m.Disk, Reason = m.Reason,
+                Volume = m.Volume == null ? NotUsed : _volumeByOption.First(kv => kv.Value.Volume == m.Volume).Key
+            });
 
         var vm = _detail.Vm;
         VmSummary = $"{vm.Name} · {vm.VmSize} · {vm.Location}\n" +
                     $"VM disk limit (uncached): {(_detail.VmMaxIops is { } i ? $"{i:N0} IOPS · {_detail.VmMaxMbps:N0} MB/s" : "unknown")} · " +
                     $"{_detail.DataDisksAttached}{(_detail.MaxDataDisks is { } md ? $" of {md}" : "")} data disks";
         Status = Rows.Any(r => r.Volume == NotUsed && !r.Disk.IsOsDisk)
-            ? "Check the Volume column. Disks without a confident match are set to (not used). Choose the volume each one backs; give every disk in a storage pool the same volume."
+            ? "Some disks have no confident match. Choose their volumes, or use Copy LUN script to map every disk exactly. Give every disk in a storage pool the same volume."
             : "Check the matches, then Apply.";
         Step = "Map";
     }
@@ -160,13 +174,16 @@ public partial class AzureSyncViewModel : ObservableObject
     private void Back() => Step = "Vm";
 
     [RelayCommand]
+    private void CopyLunScript() => LunScript.CopyWithInstructions(System.Windows.Application.Current.Windows.OfType<Views.AzureSyncWindow>().FirstOrDefault());
+
+    [RelayCommand]
     private void Apply()
     {
         if (_detail == null) return;
         int changed = 0;
         foreach (var group in Rows.Where(r => r.Volume != NotUsed).GroupBy(r => r.Volume))
         {
-            var volume = _volumes.First(v => v.Volume == group.Key);
+            var volume = _volumeByOption[group.Key];
             var note = AzureSync.Apply(volume, group.Select(r => r.Disk).ToList(), SetCosts);
             _store.SaveDisk(volume);
             if (note != null) _store.AddNote(new DiskNote { ServerId = _server.Id, Volume = volume.Volume, Timestamp = DateTime.Now, Text = note });

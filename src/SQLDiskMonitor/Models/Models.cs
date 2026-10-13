@@ -45,6 +45,10 @@ public partial class DiskConfig : ObservableObject
     /// <summary>Name of the underlying disk, e.g. the Azure managed disk resource name.</summary>
     [ObservableProperty] private string _diskName = "";
     [ObservableProperty] private int? _lun;
+    /// <summary>LUNs of the disks behind a storage pool volume, e.g. "0,1,2".</summary>
+    [ObservableProperty] private string _poolLuns = "";
+    public IReadOnlyList<int> PoolLunList => PoolLuns.Split([",", ";", " "], StringSplitOptions.RemoveEmptyEntries)
+        .Select(s => int.TryParse(s, out var n) ? n : -1).Where(n => n >= 0).ToList();
     [ObservableProperty] private string _tier = "";
     [ObservableProperty] private double _maxIops;
     [ObservableProperty] private double _maxMbps;

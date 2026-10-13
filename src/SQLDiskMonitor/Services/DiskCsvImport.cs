@@ -35,6 +35,8 @@ public static class DiskCsvImport
         new("Disk name", Kind.Text, ["diskname", "resourcename", "azurediskname", "azureresourcename", "manageddisk", "manageddiskname", "cloudname"],
             d => string.IsNullOrWhiteSpace(d.DiskName), (d, v) => d.DiskName = (string)v),
         new("LUN", Kind.Int, ["lun", "lunnumber", "scsilun"], d => d.Lun == null, (d, v) => d.Lun = (int)v),
+        new("Pool LUNs", Kind.Text, ["poolluns", "storagepoolluns", "luns"],
+            d => string.IsNullOrWhiteSpace(d.PoolLuns), (d, v) => d.PoolLuns = (string)v),
         new("Disk number", Kind.Int, ["disknumber", "disk#", "diskno", "diskindex", "physicaldisk"], d => d.DiskNumber == null, (d, v) => d.DiskNumber = (int)v),
         new("Device / model", Kind.Text, ["devicemodel", "device/model", "device", "model"], d => string.IsNullOrWhiteSpace(d.DeviceModel), (d, v) => d.DeviceModel = (string)v),
         new("Tier", Kind.Text, ["tier", "sku", "disktype", "disktier", "type"], d => string.IsNullOrWhiteSpace(d.Tier), (d, v) => d.Tier = (string)v),
@@ -68,7 +70,7 @@ public static class DiskCsvImport
         {
             string[] values =
             [
-                d.Volume, d.Label, d.DriveName, d.DiskName, d.Lun?.ToString() ?? "", d.DiskNumber?.ToString() ?? "", d.DeviceModel, d.Tier,
+                d.Volume, d.Label, d.DriveName, d.DiskName, d.Lun?.ToString() ?? "", d.PoolLuns, d.DiskNumber?.ToString() ?? "", d.DeviceModel, d.Tier,
                 N(d.MaxIops), N(d.MaxMbps), N(d.BurstIops), N(d.BurstMbps), N(d.SizeGb), N(d.CostMonthly), N(d.CostPerGb), N(d.CostPerIops),
                 N(d.CostPerMbps), d.Tags, d.Notes.ReplaceLineEndings(" ")
             ];

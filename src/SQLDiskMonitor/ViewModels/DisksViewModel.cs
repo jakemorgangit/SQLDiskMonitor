@@ -114,6 +114,9 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
     }
 
     [RelayCommand]
+    private void CopyLunScript() => Services.Azure.LunScript.CopyWithInstructions(System.Windows.Application.Current.MainWindow);
+
+    [RelayCommand]
     private async Task SyncAzure()
     {
         if (Server == null || DiskList.Count == 0) { Shell.ShowToast("No disks yet. Collect from the server first."); return; }
@@ -259,7 +262,7 @@ public partial class DisksViewModel(MainViewModel shell) : PageViewModel(shell)
         }
         catch (Exception ex)
         {
-            DetectStatus = $"WMI query failed: {ex.Message} You need remote WMI access (usually local admin) on {host}. LUNs can still be entered manually.";
+            DetectStatus = $"WMI query failed: {ex.Message} Remote WMI (usually local admin) isn't available to {host} from here. Use Copy LUN script for the server instead, or enter LUNs by hand.";
         }
     }
 }

@@ -30,7 +30,16 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 - For each managed disk it reads the disk name, LUN, type and **tier** (including a performance tier set above the size's own tier), provisioned **IOPS and MB/s**, bursting (credit-based or on-demand), size, host caching, write accelerator, zone, encryption, network access and creation date.
 - It shows the **next size up** (size, IOPS, MB/s and extra monthly cost) and whether the disk is **expandable** (online, needs the VM deallocated, at maximum size, or shared). Monthly prices come from the Azure retail price list in your currency.
 - It also reads the VM size's **uncached disk limit** and data-disk slots. A finding flags when the VM, not the disks, is the cap.
-- Disks are matched to Windows volumes from a previous sync, OS disk to C:, recorded LUNs, or an unambiguous size match. That includes storage pools such as the SQL Server images' `SQLVMDATA1`, where several disks back one volume and their limits are added together. You confirm the matches before anything is saved.
+- Disks are matched to Windows volumes using, in order:
+  - a previous sync, and the OS disk to C:
+  - recorded LUNs and **pool LUNs**
+  - an Azure disk **tag** naming the volume
+  - the volume's **label or drive name inside the disk name**
+  - a unique size, or an equal-sized storage pool (such as the SQL Server images' `SQLVMDATA1`, whose disks' limits are added together)
+  - Windows disk order for same-sized disks, marked for you to check
+
+  You confirm the matches before anything is saved.
+- For exact matching with Reader-only access, **Copy LUN script** gives you [a PowerShell script](tools/Get-DiskLuns.ps1) to run on the VM. It writes a CSV of each drive letter's LUN, including the LUNs behind storage pools. Import it with Import CSV, then sync, and every disk matches by LUN.
 - Azure owns the disk name, LUN, tier, limits, size, host-cache tag and cost. Your label, drive name, notes and other tags are never changed, and tier or limit changes are added to the disk's change log.
 
 **Reports**

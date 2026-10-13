@@ -36,6 +36,14 @@
                 <Button Style="{StaticResource AccentButton}" Content="Apply to disks" Command="{Binding ApplyCommand}"
                         Visibility="{Binding IsMapStep, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
+            <Button DockPanel.Dock="Left" Style="{StaticResource GhostButton}" Command="{Binding CopyLunScriptCommand}" Margin="0,0,12,0"
+                    Visibility="{Binding IsMapStep, Converter={StaticResource BoolToVis}}"
+                    ToolTip="A PowerShell script to run on the VM that maps each drive letter to its LUN, for exact matching">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Copy LUN script" />
+                </StackPanel>
+            </Button>
             <ProgressBar DockPanel.Dock="Left" IsIndeterminate="True" Width="80" Height="3" Margin="0,0,12,0"
                          Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
             <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -103,7 +111,7 @@
                                 <DataGridTextColumn Header="MB/s" Binding="{Binding Disk.Mbps, StringFormat=N0}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="Cache" Binding="{Binding Disk.Caching}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="Monthly" Binding="{Binding Disk.MonthlyPrice, StringFormat=N2}" IsReadOnly="True" Width="Auto" />
-                                <DataGridTemplateColumn Header="Volume" Width="150">
+                                <DataGridTemplateColumn Header="Volume" Width="240">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <ComboBox ItemsSource="{Binding DataContext.VolumeOptions, RelativeSource={RelativeSource AncestorType=Window}}"

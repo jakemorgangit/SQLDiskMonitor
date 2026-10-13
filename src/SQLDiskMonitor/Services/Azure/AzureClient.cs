@@ -17,7 +17,8 @@ public record AzureVm(string Id, string Name, string ResourceGroup, string Subsc
 
 public record AzureDisk(string Id, string Name, int? Lun, bool IsOsDisk, string Caching, bool WriteAccelerator, double SizeGb,
     string SkuName, string Tier, double Iops, double Mbps, bool BurstingEnabled, string Location,
-    int MaxShares = 1, string Encryption = "", string NetworkAccess = "", string Zone = "", string DiskState = "", DateTime? Created = null);
+    int MaxShares = 1, string Encryption = "", string NetworkAccess = "", string Zone = "", string DiskState = "", DateTime? Created = null,
+    Dictionary<string, string>? Tags = null);
 
 public record AzureVmDetail(AzureVm Vm, List<AzureDisk> Disks, double? VmMaxIops, double? VmMaxMbps, int? MaxDataDisks, int DataDisksAttached);
 
@@ -222,7 +223,7 @@ public class AzureClient
         var diskRows = await GraphAsync($"""
             Resources
             | where type =~ 'microsoft.compute/disks' and managedBy =~ '{id}'
-            | project id, name, location, sku, zones, properties
+            | project id, name, location, sku, zones, tags, properties
             """, ct);
         var disks = new List<AzureDisk>();
         foreach (var d in diskRows)
@@ -237,7 +238,10 @@ public class AzureClient
                 NetworkAccess: Str(dp, "networkAccessPolicy"),
                 Zone: d.TryGetProperty("zones", out var z) && z.ValueKind == JsonValueKind.Array ? string.Join(",", z.EnumerateArray().Select(x => x.GetString())) : "",
                 DiskState: Str(dp, "diskState"),
-                Created: DateTime.TryParse(Str(dp, "timeCreated"), out var tc) ? tc : null));
+                Created: DateTime.TryParse(Str(dp, "timeCreated"), out var tc) ? tc : null,
+                Tags: d.TryGetProperty("tags", out var tg) && tg.ValueKind == JsonValueKind.Object
+                    ? tg.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() ?? "" : p.Value.ToString())
+                    : null));
         }
         disks.Sort((x, y) => (x.IsOsDisk ? -1 : x.Lun ?? 999).CompareTo(y.IsOsDisk ? -1 : y.Lun ?? 999));
 

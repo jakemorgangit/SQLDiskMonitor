@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
+    <Resource Include="..\..\tools\Get-DiskLuns.ps1" Link="Assets\Get-DiskLuns.ps1" />
   </ItemGroup>
 
   <ItemGroup>
