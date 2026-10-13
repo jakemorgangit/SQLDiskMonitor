@@ -35,6 +35,8 @@ public class AppSettings
     public double SaturationPct { get; set; } = 90;
 
     public long LastServerId { get; set; }
+    /// <summary>Overview disk card layout: Compact, Normal or List.</summary>
+    public string DashboardLayout { get; set; } = "Normal";
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 

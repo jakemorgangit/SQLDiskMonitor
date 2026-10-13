@@ -36,6 +36,16 @@ public static class ScreenshotMode
                 var file = pages.Count == 1 ? path
                     : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, $"{Path.GetFileNameWithoutExtension(path)}-{p.Title.ToLowerInvariant()}.png");
                 Save(window, file);
+                if (p == vm.Dashboard && pages.Count > 1)
+                {
+                    foreach (var layout in new[] { "Compact", "List" })
+                    {
+                        vm.Dashboard.CardLayout = layout;
+                        await Task.Delay(800);
+                        Save(window, file.Replace("-overview.png", $"-overview-{layout.ToLowerInvariant()}.png"));
+                    }
+                    vm.Dashboard.CardLayout = "Normal";
+                }
                 if (p == vm.Disks && pages.Count > 1)
                 {
                     vm.Disks.ViewMode = "Inventory";

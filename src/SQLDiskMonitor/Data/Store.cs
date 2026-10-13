@@ -118,7 +118,9 @@ public class Store
             CREATE INDEX IF NOT EXISTS ix_fsp ON file_space(server_id, ts);
             """);
         // Columns added after the first schema; ignore "duplicate column" on databases that already have them.
-        foreach (var alter in new[] { "ALTER TABLE files ADD COLUMN used_mb REAL NULL", "ALTER TABLE disks ADD COLUMN tags TEXT NOT NULL DEFAULT ''" })
+        foreach (var alter in new[] { "ALTER TABLE files ADD COLUMN used_mb REAL NULL", "ALTER TABLE disks ADD COLUMN tags TEXT NOT NULL DEFAULT ''",
+                                         "ALTER TABLE disks ADD COLUMN drive_name TEXT NOT NULL DEFAULT ''",
+                                         "ALTER TABLE disks ADD COLUMN disk_name TEXT NOT NULL DEFAULT ''" })
         {
             try { Exec(c, alter); } catch (SqliteException) { }
         }
@@ -205,7 +207,7 @@ public class Store
         using var c = Open();
         return Query(c, """
             SELECT volume,label,lun,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,cost_monthly,cost_per_gb,
-                   cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags
+                   cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name
             FROM disks WHERE server_id=$s ORDER BY volume
             """, ("$s", serverId))
             .Select(r => new DiskConfig
@@ -214,7 +216,8 @@ public class Store
                 Tier = r.GetString(3), MaxIops = r.GetDouble(4), MaxMbps = r.GetDouble(5), BurstIops = r.GetDouble(6),
                 BurstMbps = r.GetDouble(7), SizeGb = r.GetDouble(8), CostMonthly = r.GetDouble(9), CostPerGb = r.GetDouble(10),
                 CostPerIops = r.GetDouble(11), CostPerMbps = r.GetDouble(12), Notes = r.GetString(13),
-                DiskNumber = r.IsDBNull(14) ? null : r.GetInt32(14), DeviceModel = r.GetString(15), Tags = r.GetString(16)
+                DiskNumber = r.IsDBNull(14) ? null : r.GetInt32(14), DeviceModel = r.GetString(15), Tags = r.GetString(16),
+                DriveName = r.GetString(17), DiskName = r.GetString(18)
             }).ToList();
     }
 
@@ -233,16 +236,17 @@ public class Store
         using var c = Open();
         Exec(c, """
             INSERT INTO disks(server_id,volume,label,lun,tier,max_iops,max_mbps,burst_iops,burst_mbps,size_gb,cost_monthly,
-                              cost_per_gb,cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags)
-            VALUES($s,$v,$label,$lun,$tier,$iops,$mbps,$biops,$bmbps,$size,$cm,$cgb,$ciops,$cmbps,$notes,$dn,$model,$tags)
+                              cost_per_gb,cost_per_iops,cost_per_mbps,notes,disk_number,device_model,tags,drive_name,disk_name)
+            VALUES($s,$v,$label,$lun,$tier,$iops,$mbps,$biops,$bmbps,$size,$cm,$cgb,$ciops,$cmbps,$notes,$dn,$model,$tags,$drive,$disk)
             ON CONFLICT(server_id,volume) DO UPDATE SET label=$label,lun=$lun,tier=$tier,max_iops=$iops,max_mbps=$mbps,
                 burst_iops=$biops,burst_mbps=$bmbps,size_gb=$size,cost_monthly=$cm,cost_per_gb=$cgb,cost_per_iops=$ciops,
-                cost_per_mbps=$cmbps,notes=$notes,disk_number=$dn,device_model=$model,tags=$tags
+                cost_per_mbps=$cmbps,notes=$notes,disk_number=$dn,device_model=$model,tags=$tags,drive_name=$drive,disk_name=$disk
             """,
             ("$s", d.ServerId), ("$v", d.Volume), ("$label", d.Label), ("$lun", d.Lun), ("$tier", d.Tier),
             ("$iops", d.MaxIops), ("$mbps", d.MaxMbps), ("$biops", d.BurstIops), ("$bmbps", d.BurstMbps),
             ("$size", d.SizeGb), ("$cm", d.CostMonthly), ("$cgb", d.CostPerGb), ("$ciops", d.CostPerIops),
-            ("$cmbps", d.CostPerMbps), ("$notes", d.Notes), ("$dn", d.DiskNumber), ("$model", d.DeviceModel), ("$tags", d.Tags));
+            ("$cmbps", d.CostPerMbps), ("$notes", d.Notes), ("$dn", d.DiskNumber), ("$model", d.DeviceModel), ("$tags", d.Tags),
+            ("$drive", d.DriveName), ("$disk", d.DiskName));
     }
 
     public List<DiskNote> GetNotes(long serverId, string? volume = null)

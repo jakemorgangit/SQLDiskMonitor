@@ -148,7 +148,7 @@ public class DiskConfigTests
         t.Store.SaveServer(server);
         t.Store.SaveDisk(new DiskConfig
         {
-            ServerId = server.Id, Volume = "E:\\Mounts\\Data01\\", Label = "Data01", Lun = 0, DiskNumber = 5, DeviceModel = "PURE FlashArray",
+            ServerId = server.Id, Volume = "E:\\Mounts\\Data01\\", Label = "Data01", DriveName = "SQL data", DiskName = "sqlprod01-datadisk-00", Lun = 0, DiskNumber = 5, DeviceModel = "PURE FlashArray",
             Tier = "SAN / array LUN", MaxIops = 20000, MaxMbps = 400, Tags = "SAN: Pure-02, host cache: n/a ,  owner: DBA", Notes = "Thin provisioned"
         });
         t.Store.AddNote(new DiskNote { ServerId = server.Id, Volume = "E:\\Mounts\\Data01\\", Timestamp = DateTime.Now, Text = "Migrated from VNX" });
@@ -156,6 +156,9 @@ public class DiskConfigTests
         var d = Assert.Single(t.Store.GetDisks(server.Id));
         Assert.Equal(0, d.Lun);
         Assert.Equal(5, d.DiskNumber);
+        Assert.Equal("SQL data", d.DriveName);
+        Assert.Equal("sqlprod01-datadisk-00", d.DiskName);
+        Assert.Equal("SQL data  ·  sqlprod01-datadisk-00", d.NamesText);
         Assert.Equal("PURE FlashArray", d.DeviceModel);
         Assert.Equal(["SAN: Pure-02", "host cache: n/a", "owner: DBA"], d.TagList);
         Assert.Equal("Migrated from VNX", Assert.Single(t.Store.GetNotes(server.Id, d.Volume)).Text);
