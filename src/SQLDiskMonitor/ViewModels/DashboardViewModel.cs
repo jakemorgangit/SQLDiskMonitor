@@ -27,6 +27,9 @@ public partial class DiskCardViewModel : ObservableObject
     [ObservableProperty] private string _filesSummary = "";
     [ObservableProperty] private string _peakText = "";
     [ObservableProperty] private string _spaceTrend = "";
+    /// <summary>Colour of the space bar; null colours it by how full the volume is.</summary>
+    [ObservableProperty] private System.Windows.Media.Brush? _spaceFill;
+    public double? FreeInFilesGb { get; init; }
 
     public double UsedGb => TotalGb - FreeGb;
     public double WorstLatency => Math.Max(ReadLatency, WriteLatency);
@@ -35,7 +38,9 @@ public partial class DiskCardViewModel : ObservableObject
     public double UsedPct => TotalGb > 0 ? UsedGb / TotalGb * 100 : 0;
     public string IopsText => Config.MaxIops > 0 ? $"{Iops:N0} / {Config.MaxIops:N0}" : $"{Iops:N0}";
     public string MbpsText => Config.MaxMbps > 0 ? $"{Mbps:N1} / {Config.MaxMbps:N0}" : $"{Mbps:N1}";
-    public string SpaceText => TotalGb > 0 ? $"{FreeGb:N0} GB free of {TotalGb:N0} GB" : "";
+    public string SpaceText => TotalGb <= 0 ? ""
+        : FreeInFilesGb is > 0.5 ? $"{FreeGb:N0} GB free of {TotalGb:N0} GB · +{FreeInFilesGb:N0} GB inside files"
+        : $"{FreeGb:N0} GB free of {TotalGb:N0} GB";
 
     partial void OnIopsChanged(double value) => OnPropertyChanged(nameof(IopsText));
     partial void OnMbpsChanged(double value) => OnPropertyChanged(nameof(MbpsText));
@@ -118,13 +123,15 @@ public partial class DashboardViewModel(MainViewModel shell) : PageViewModel(she
             var volFiles = files.Where(f => f.Volume.Equals(d.Volume, StringComparison.OrdinalIgnoreCase)).ToList();
             if (volFiles.Count == 0 && !recent.Any(r => r.Volume == d.Volume)) continue;
             var stats = analysis.Disks.FirstOrDefault(s => s.Volume == d.Volume);
+            var sv = analysis.Space.Volumes.FirstOrDefault(v => v.Volume == d.Volume);
             Cards.Add(new DiskCardViewModel
             {
                 Config = d,
+                FreeInFilesGb = sv?.FreeInFilesGb,
+                SpaceFill = SpaceBrush(sv),
                 FilesSummary = $"{volFiles.Count} files · {volFiles.Select(f => f.DatabaseId).Distinct().Count()} databases · {volFiles.Sum(f => f.SizeMb) / 1024:N1} GB",
                 PeakText = stats is { PeakHour: >= 0 } ? $"24h peak {stats.PeakPressure:N0} · busiest {stats.PeakHour:00}:00" : "",
-                SpaceTrend = analysis.Space.Volumes.FirstOrDefault(v => v.Volume == d.Volume) is { GrowthGbPerDay: not null } sv
-                    ? sv.DaysToFull != null ? $"{sv.GrowthText} · full in {sv.DaysToFullText}" : "Not growing" : "",
+                SpaceTrend = SpaceTrendText(sv),
             });
         }
         ApplyRecent(recent);
@@ -132,6 +139,26 @@ public partial class DashboardViewModel(MainViewModel shell) : PageViewModel(she
         foreach (var f in analysis.Findings.Where(f => f.Severity >= Severity.Medium).Take(5)) TopFindings.Add(f);
         if (TopFindings.Count == 0)
             foreach (var f in analysis.Findings.Take(3)) TopFindings.Add(f);
+    }
+
+    /// <summary>
+    /// Space bar colour: neutral when free space is excluded from health, by effective headroom when unused space
+    /// inside files counts, otherwise by how full the volume is.
+    /// </summary>
+    private System.Windows.Media.Brush? SpaceBrush(VolumeSpace? sv)
+    {
+        if (!Cfg.SpaceInHealth) return Controls.Palette.Brush("Accent");
+        if (!Cfg.CountFileFreeSpace || sv == null) return null;
+        return Controls.Palette.ForPressure(sv.EffectiveUsedPct);
+    }
+
+    private string SpaceTrendText(VolumeSpace? sv)
+    {
+        if (sv == null) return "";
+        if (Cfg.CountFileFreeSpace)
+            return sv.DataGrowthGbPerDay == null ? "" : sv.EffectiveDaysToFull != null
+                ? $"Data {sv.DataGrowthText} · headroom for {sv.EffectiveDaysToFullText}" : "Data not growing";
+        return sv.GrowthGbPerDay == null ? "" : sv.DaysToFull != null ? $"{sv.GrowthText} · full in {sv.DaysToFullText}" : "Not growing";
     }
 
     public override void OnSample(SampleBatch batch) => ApplyRecent(Shell.Collector.Recent(batch.ServerId));

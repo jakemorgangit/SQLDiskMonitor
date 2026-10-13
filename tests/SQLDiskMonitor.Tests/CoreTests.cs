@@ -269,6 +269,31 @@ public class AnalyticsTests
     }
 
     [Fact]
+    public void Space_alerts_follow_settings()
+    {
+        using var t = new TempStore();
+        var server = new ServerConnection { Name = "demo", Address = "demo" };
+        t.Store.SaveServer(server);
+        foreach (var d in DemoSource.DemoDisks(server.Id)) t.Store.SaveDisk(d);
+        Collector.BackfillDemo(t.Store, server.Id, new AppSettings(), 2);
+        var from = DateTime.Now.AddDays(-2);
+
+        // T: (tempdb) has 7% free on the volume, but its pre-sized files are mostly empty.
+        bool LowSpace(AppSettings cfg) => Analytics.Analyse(t.Store, server.Id, from, DateTime.Now, cfg).Findings
+            .Any(f => f.Category == "Space" && f.Volume == "T:\\" && f.Title.Contains("%"));
+
+        Assert.True(LowSpace(new AppSettings { CountFileFreeSpace = false }));
+        Assert.False(LowSpace(new AppSettings { CountFileFreeSpace = true }));
+
+        var off = Analytics.Analyse(t.Store, server.Id, from, DateTime.Now, new AppSettings { SpaceInHealth = false });
+        Assert.DoesNotContain(off.Findings, f => f.Category == "Space");
+
+        var tVol = off.Space.Volumes.Single(v => v.Volume == "T:\\");
+        Assert.True(tVol.FreeInFilesGb > 40, $"free in files {tVol.FreeInFilesGb}");
+        Assert.True(tVol.EffectiveFreePct > 40 && tVol.FreePct < 10);
+    }
+
+    [Fact]
     public void Percentile_matches_nearest_rank()
     {
         var v = Enumerable.Range(1, 100).Select(i => (double)i).ToList();

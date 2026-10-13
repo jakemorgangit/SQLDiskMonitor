@@ -152,6 +152,23 @@
 
                     <Border Style="{StaticResource Section}">
                         <StackPanel>
+                            <TextBlock Text="Space alerts" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding SpaceInHealth}" Content="Include free space in health and alerts" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="48,4,0,12"
+                                       Text="Off: no low-space or fill-date findings, and space bars on the Overview are neutral. Pressure scores never include free space." />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CountFileFreeSpace}" IsEnabled="{Binding SpaceInHealth}"
+                                      Content="Count free space inside database files as headroom" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="48,4,0,12"
+                                       Text="For pre-sized data files: headroom is volume free space plus unused space inside the files, and fill dates follow data growth inside the files rather than file autogrowth." />
+                            <StackPanel Style="{StaticResource Field}" HorizontalAlignment="Left" Width="180" IsEnabled="{Binding SpaceInHealth}">
+                                <TextBlock Text="Warn below (% free)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding SpaceWarnPct}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
                             <TextBlock Text="Behaviour" Style="{StaticResource H2}" Margin="0,0,0,12" />
                             <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray}" Content="Minimise to the notification area and keep collecting" Margin="0,0,0,10" />
                             <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows}" Content="Start with Windows" Margin="0,0,0,10" />

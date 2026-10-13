@@ -72,8 +72,11 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="DB files GB" Binding="{Binding AllocatedGb, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
                             <DataGridTextColumn Header="Used in files GB" Binding="{Binding UsedInFilesGb, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
-                            <DataGridTextColumn Header="Growth" Binding="{Binding GrowthText}" ElementStyle="{StaticResource NumCell}" Width="110" />
-                            <DataGridTextColumn Header="Full in" Binding="{Binding DaysToFullText}" ElementStyle="{StaticResource NumCell}" Width="100" />
+                            <DataGridTextColumn Header="Free in files GB" Binding="{Binding FreeInFilesGb, StringFormat=N1}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Headroom GB" Binding="{Binding EffectiveFreeGb, StringFormat=N0}" ElementStyle="{StaticResource NumCell}" />
+                            <DataGridTextColumn Header="Volume growth" Binding="{Binding GrowthText}" ElementStyle="{StaticResource NumCell}" Width="110" />
+                            <DataGridTextColumn Header="Data growth" Binding="{Binding DataGrowthText}" ElementStyle="{StaticResource NumCell}" Width="110" />
+                            <DataGridTextColumn Header="Headroom lasts" Binding="{Binding EffectiveDaysToFullText}" ElementStyle="{StaticResource NumCell}" Width="110" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
@@ -93,7 +96,7 @@
                 <StackPanel>
                     <TextBlock Text="Databases" Style="{StaticResource H2}" />
                     <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,10"
-                               Text="Allocated is the size of the files on disk. Used is the space inside them, checked every 15 minutes." />
+                               Text="Allocated is the size of the files on disk. Used is the space inside them, checked every 15 minutes. Headroom is volume free space plus unused space inside the files." />
                     <DataGrid ItemsSource="{Binding Databases}" Style="{StaticResource Table}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Database" Binding="{Binding Database}" Width="*" />

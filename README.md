@@ -38,6 +38,8 @@ A Windows desktop tool for DBAs that shows how hard SQL Server is working its st
 **Space**
 - Total, used and free space per disk, with used space over time.
 - A growth trend in GB/day and a **days-until-full** forecast for each disk.
+- **Headroom** = volume free space + unused space inside the database files. Pre-sized data files grow internally, so a disk can look nearly full and still have plenty of room.
+- **Space alerts** in Settings: turn free space off as a health signal entirely, or count unused space inside data files as headroom (the default). In that mode the fill-date forecast follows data growth inside the files rather than file autogrowth, and you choose the warning threshold (% free).
 - Allocated vs used space for each database and file (checked every 15 minutes), with growth per day and autogrowth event counts.
 
 **Bottlenecks**
