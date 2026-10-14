@@ -161,6 +161,13 @@ pwsh build/screenshots.ps1                 # regenerate docs/screenshots from th
 
 The integration test runs against a real instance when `SQLDM_TEST_SERVER` is set (for example `.\SQLEXPRESS`).
 
+The code is split in two projects:
+
+- `src/SQLDiskMonitor.Core`: everything except the standalone shell (collector, SQLite history, Azure, reports, view models and views). `Views/DiskMonitorView` is the whole UI as a control.
+- `src/SQLDiskMonitor`: the standalone app (window, tray icon, single instance, updater, `--report` and `--screenshot` modes).
+
+[Blackcat Studio](https://blackcat.wales) hosts `DiskMonitorView` in a tab through `SQLDiskMonitor.Hosting`: Studio supplies the connection string (credentials stay in Studio), the data folder and the theme colours. Hosted, the updater, tray, start-up options, theme switch and demo server are off, and the app's theme dictionaries are merged into the hosted control, never into the host's application resources.
+
 Build from a short path such as `C:\src\SQLDiskMonitor`. Windows Installer and WPF's native libraries fail when the path is very long.
 
 ### Releasing

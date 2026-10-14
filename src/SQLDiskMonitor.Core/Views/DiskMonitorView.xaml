@@ -1,0 +1,212 @@
+<UserControl x:Class="SQLDiskMonitor.Views.DiskMonitorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:MainViewModel}" d:DesignWidth="1440" d:DesignHeight="900"
+             Background="{DynamicResource B.Bg}" Foreground="{DynamicResource B.Text}"
+             FontFamily="{DynamicResource UiFont}">
+    <!-- The whole app: navigation rail, page header and pages. The standalone MainWindow and hosts such as
+         Blackcat Studio both show this control. -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}" />
+    </UserControl.InputBindings>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="236" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ───────────── Navigation rail ───────────── -->
+        <Border Background="{DynamicResource B.Nav}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="18,20,16,6">
+                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource B.Accent}">
+                        <TextBlock Text="&#xEDA2;" FontFamily="{StaticResource IconFont}" FontSize="17" Foreground="{DynamicResource B.OnAccent}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="SQL Disk Monitor" FontWeight="SemiBold" FontSize="14.5" Foreground="{DynamicResource B.Text}" />
+                        <TextBlock Text="Storage pressure &amp; cost" Style="{StaticResource Caption}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Server picker -->
+                <StackPanel DockPanel.Dock="Top" Margin="16,18,16,14">
+                    <DockPanel Margin="2,0,0,6">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="5,2" ToolTip="{Binding AddServerToolTip}"
+                                Command="{Binding AddServerCommand}">
+                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="12" />
+                        </Button>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="5,2" ToolTip="Edit connection"
+                                Command="{Binding EditServerCommand}" CommandParameter="{Binding SelectedServer}"
+                                Visibility="{Binding CanEditSelectedServer, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="&#xE70F;" FontFamily="{StaticResource IconFont}" FontSize="12" />
+                        </Button>
+                        <TextBlock Text="SERVER" Style="{StaticResource Overline}" Margin="0" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ComboBox ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="dot" Width="7" Height="7" Margin="0,0,8,0" Fill="{DynamicResource B.TextSubtle}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsCollecting}" Value="True">
+                                        <Setter TargetName="dot" Property="Fill" Value="{DynamicResource B.Good}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                                        <Setter TargetName="dot" Property="Fill" Value="{DynamicResource B.Crit}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Footer -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,16">
+                    <Border Style="{StaticResource Inset}" Padding="10,8" Margin="0,0,0,10"
+                            Visibility="{Binding SelectedServer, Converter={StaticResource HasValue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="statusDot" Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="{DynamicResource B.TextSubtle}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedServer.IsCollecting}" Value="True">
+                                                    <Setter Property="Fill" Value="{DynamicResource B.Good}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding SelectedServer.HasError}" Value="True">
+                                                    <Setter Property="Fill" Value="{DynamicResource B.Crit}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="Collector" FontSize="12" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding SelectedServer.Status}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="14,2,0,0"
+                                       ToolTip="{Binding SelectedServer.Status}" MaxHeight="44" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Border>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Command="{Binding ToggleThemeCommand}"
+                                ToolTip="Switch light / dark theme" Padding="7,5"
+                                Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}">
+                            <TextBlock Text="&#xE793;" FontFamily="{StaticResource IconFont}" FontSize="15" />
+                        </Button>
+                        <TextBlock Text="{Binding VersionText}" Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                   Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}" />
+                    </DockPanel>
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding CurrentPage}" Style="{StaticResource BareList}"
+                         ItemContainerStyle="{StaticResource NavListItem}" />
+            </DockPanel>
+        </Border>
+
+        <!-- ───────────── Content ───────────── -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Update banner -->
+            <Border Background="{DynamicResource B.AccentSoft}" Padding="28,10" Visibility="{Binding AvailableUpdate, Converter={StaticResource HasValue}}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource GhostButton}" Content="Release notes" Command="{Binding ViewReleaseCommand}" Margin="0,0,4,0" />
+                        <Button Style="{StaticResource GhostButton}" Content="Skip this version" Command="{Binding SkipUpdateCommand}" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource AccentButton}" Command="{Binding InstallUpdateCommand}" IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBool}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Download &amp; install" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource B.Accent}" FontSize="16" VerticalAlignment="Center" />
+                        <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="13">
+                            <Run Text="SQL Disk Monitor" FontWeight="SemiBold" />
+                            <Run Text="{Binding AvailableUpdate.Tag, Mode=OneWay}" FontWeight="SemiBold" />
+                            <Run Text="is available." />
+                        </TextBlock>
+                        <ProgressBar Width="160" Height="4" Margin="16,0,0,0" Maximum="1" Value="{Binding UpdateProgress}"
+                                     Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Page header -->
+            <Grid Grid.Row="1" Margin="28,22,28,14">
+                <StackPanel>
+                    <TextBlock Text="{Binding CurrentPage.Title}" Style="{StaticResource H1}" />
+                    <TextBlock Text="{Binding CurrentPage.Subtitle}" Style="{StaticResource Muted}" Margin="0,3,0,0" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <ListBox ItemsSource="{Binding TimeRanges}" SelectedItem="{Binding SelectedRange}" Style="{StaticResource SegmentList}"
+                             Visibility="{Binding CurrentPage.UsesTimeRange, Converter={StaticResource BoolToVis}}" Margin="0,0,10,0" />
+                    <Button Style="{StaticResource GhostButton}" Command="{Binding OpenReportCommand}" ToolTip="Create an HTML or PDF report" Margin="0,0,2,0"
+                            Visibility="{Binding SelectedServer, Converter={StaticResource HasValue}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,7,0" />
+                            <TextBlock Text="Report" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource GhostButton}" Command="{Binding RefreshCommand}" ToolTip="Refresh (F5)" Margin="0,0,6,0">
+                        <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="14" />
+                    </Button>
+                    <Button Command="{Binding ToggleCollectCommand}" Visibility="{Binding SelectedServer, Converter={StaticResource HasValue}}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Start collecting" />
+                                        </StackPanel>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedServer.IsCollecting}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource B.Surface2}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource B.Text}" />
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE71A;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                    <TextBlock Text="Stop collecting" />
+                                                </StackPanel>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <ProgressBar Grid.Row="2" IsIndeterminate="True" Height="2" VerticalAlignment="Top" Margin="28,0" BorderThickness="0"
+                         Visibility="{Binding CurrentPage.IsBusy, Converter={StaticResource BoolToVis}}" />
+
+            <ContentControl Grid.Row="2" Content="{Binding CurrentPage}" Margin="28,6,28,20" Focusable="False" />
+
+            <!-- Toast -->
+            <Border Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,26" Padding="16,10" CornerRadius="8"
+                    Background="{DynamicResource B.Surface2}" BorderBrush="{DynamicResource B.Border}" BorderThickness="1"
+                    Visibility="{Binding Toast, Converter={StaticResource HasValue}}">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.25" />
+                </Border.Effect>
+                <TextBlock Text="{Binding Toast}" FontSize="12.5" />
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

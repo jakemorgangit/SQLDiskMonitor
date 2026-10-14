@@ -1,0 +1,238 @@
+<UserControl x:Class="SQLDiskMonitor.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SQLDiskMonitor.ViewModels"
+             xmlns:m="clr-namespace:SQLDiskMonitor.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
+    <UserControl.Resources>
+        <Style x:Key="Section" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style x:Key="Field" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,16,14" />
+        </Style>
+        <Style x:Key="ThemeOption" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="8" BorderThickness="1.5" BorderBrush="{DynamicResource B.Border}" Padding="16,10" Background="{DynamicResource B.Surface2}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{TemplateBinding Tag}" FontFamily="{StaticResource IconFont}" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="{DynamicResource B.TextMuted}" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource B.Accent}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource B.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Padding="0,12,0,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Command="{Binding SaveCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Save settings" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" Text="Theme and cost tracking apply immediately. Everything else applies when you save." />
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,6,0">
+                    <Border Style="{StaticResource Section}" Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}">
+                        <StackPanel>
+                            <TextBlock Text="Appearance" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource ThemeOption}" Tag="&#xE706;" Content="Light" GroupName="theme"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static m:ThemePreference.Light}}" />
+                                <RadioButton Style="{StaticResource ThemeOption}" Tag="&#xE708;" Content="Dark" GroupName="theme"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static m:ThemePreference.Dark}}" />
+                                <RadioButton Style="{StaticResource ThemeOption}" Tag="&#xE7F4;" Content="Follow Windows" GroupName="theme"
+                                             IsChecked="{Binding Theme, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static m:ThemePreference.System}}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Text="Collection" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <UniformGrid Columns="3">
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Sample every (seconds)" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding Intervals}" SelectedItem="{Binding SampleInterval}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Keep disk history (days)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding RetentionDays}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Keep file history (days)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding FileRetentionDays}" />
+                                </StackPanel>
+                            </UniformGrid>
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Text="Collection is one lightweight DMV query per interval. File-level history is the largest table, so it has its own, shorter retention." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Text="Pressure thresholds" Style="{StaticResource H2}" Margin="0,0,0,4" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,12" Text="Latency in milliseconds that scores as good, warning and critical." />
+                            <UniformGrid Columns="3">
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Data good" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding DataGood}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Data warning" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding DataWarn}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Data critical" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding DataCrit}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Log write good" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding LogGood}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Log write warning" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding LogWarn}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Log write critical" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding LogCrit}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Ignore latency below (IOPS)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding MinIops}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Saturated at (% of limit)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Saturation}" />
+                                </StackPanel>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Text="Costs" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CostsEnabled}" Content="Track storage costs" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="48,4,0,12"
+                                       Text="Adds cost fields to each disk, a Costs page with per-database allocation, and cost figures in reports." />
+                            <StackPanel Style="{StaticResource Field}" HorizontalAlignment="Left" Width="140">
+                                <TextBlock Text="Currency symbol" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Currency}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Text="Space alerts" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding SpaceInHealth}" Content="Include free space in health and alerts" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="48,4,0,12"
+                                       Text="Off: no low-space or fill-date findings, and space bars on the Overview are neutral. Pressure scores never include free space." />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CountFileFreeSpace}" IsEnabled="{Binding SpaceInHealth}"
+                                      Content="Count free space inside database files as headroom" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="48,4,0,12"
+                                       Text="For pre-sized data files: headroom is volume free space plus unused space inside the files, and fill dates follow data growth inside the files rather than file autogrowth." />
+                            <StackPanel Style="{StaticResource Field}" HorizontalAlignment="Left" Width="180" IsEnabled="{Binding SpaceInHealth}">
+                                <TextBlock Text="Warn below (% free)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding SpaceWarnPct}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Right" Text="&#xE753;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource B.Accent}" FontSize="16" />
+                                <TextBlock Text="Azure" Style="{StaticResource H2}" />
+                            </DockPanel>
+                            <TextBlock Text="Sign in with" Style="{StaticResource FieldLabel}" />
+                            <ListBox ItemsSource="{Binding AzureAuthModes}" SelectedItem="{Binding AzureAuthMode}" Style="{StaticResource SegmentList}" HorizontalAlignment="Left" />
+                            <StackPanel Style="{StaticResource Field}" Margin="0,12,0,10">
+                                <TextBlock Text="Tenant ID or domain (optional)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding AzureTenant, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Text="A GUID or a domain such as contoso.onmicrosoft.com, not the display name. Leave blank to use your default tenant." />
+                                <ComboBox ItemsSource="{Binding Tenants}" SelectedItem="{Binding SelectedTenant}" Margin="0,8,0,0"
+                                          Visibility="{Binding Tenants.Count, Converter={StaticResource HasValue}}" ToolTip="Pick one of your tenants" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource GhostButton}" Content="Sign out" Command="{Binding SignOutAzureCommand}" Margin="0,0,6,0" />
+                                <Button Style="{StaticResource SoftButton}" Content="Sign in" Command="{Binding SignInAzureCommand}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding AzureStatus}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0" MaxHeight="80"
+                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding AzureStatus}" />
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
+                                       Text="Used by Disks › Sync from Azure to read VM disks, tiers, limits and prices. Read-only; Reader on the VM's subscription or resource group is enough. Browser sign-in is cached on this PC; Azure CLI reuses az login." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}" Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}">
+                        <StackPanel>
+                            <TextBlock Text="Behaviour" Style="{StaticResource H2}" Margin="0,0,0,12" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray}" Content="Minimise to the notification area and keep collecting" Margin="0,0,0,10" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows}" Content="Start with Windows" Margin="0,0,0,10" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartMinimized}" Content="Start minimised" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}" Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding VersionText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                                <TextBlock Text="Updates" Style="{StaticResource H2}" />
+                            </DockPanel>
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CheckForUpdates}" Content="Check GitHub for new releases at startup" />
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button Style="{StaticResource SoftButton}" Content="Check now" Command="{Binding CheckUpdatesNowCommand}" />
+                                <Button Style="{StaticResource GhostButton}" Content="Open GitHub repository" Command="{Binding OpenRepoCommand}" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Text="Data" Style="{StaticResource H2}" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding StorageInfo}" Style="{StaticResource Muted}" />
+                            <TextBlock Text="{Binding DataFolder}" Style="{StaticResource Caption}" Margin="0,2,0,12" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource SoftButton}" Content="Open data folder" Command="{Binding OpenDataFolderCommand}" />
+                                <Button Style="{StaticResource SoftButton}" Content="Add demo server" Command="{Binding Shell.AddDemoServerCommand}" Margin="8,0,0,0"
+                                        Visibility="{Binding IsHosted, Converter={StaticResource BoolToVisInv}}" />
+                                <Button Style="{StaticResource GhostButton}" Content="Clear history for this server" Command="{Binding ClearHistoryCommand}" Margin="8,0,0,0"
+                                        Foreground="{DynamicResource B.Crit}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

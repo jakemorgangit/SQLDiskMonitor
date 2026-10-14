@@ -1,6 +1,6 @@
-using System.ComponentModel;
 using System.Windows;
 using SQLDiskMonitor.ViewModels;
+using SQLDiskMonitor.Views;
 
 namespace SQLDiskMonitor;
 
@@ -11,7 +11,8 @@ public partial class MainWindow : Window
     public MainWindow(MainViewModel vm)
     {
         InitializeComponent();
-        DataContext = _vm = vm;
+        _vm = vm;
+        Content = new DiskMonitorView(vm);
         StateChanged += (_, _) =>
         {
             // Minimised windows go to the notification area so collection carries on out of the way.

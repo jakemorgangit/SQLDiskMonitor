@@ -1,0 +1,12 @@
+<Project>
+  <!-- Shared by the app and its UI/Core library (imported explicitly, so a host repo that builds the library
+       as a submodule doesn't pick up any Directory.Build.props from here). build.ps1 and the release workflow
+       override Version with -p:Version=x.y.z. -->
+  <PropertyGroup>
+    <Version Condition="'$(Version)' == ''">2.2.0</Version>
+    <Product>SQL Disk Monitor</Product>
+    <Company>Blackcat Data Solutions Ltd</Company>
+    <Authors>Jake Morgan</Authors>
+    <Copyright>© 2026 Blackcat Data Solutions Ltd</Copyright>
+  </PropertyGroup>
+</Project>

@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\build\Version.props" />
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -14,12 +16,7 @@
     <NoWarn>$(NoWarn);WPF0001;MVVMTK0045</NoWarn>
 
     <AssemblyTitle>SQL Disk Monitor</AssemblyTitle>
-    <Product>SQL Disk Monitor</Product>
-    <Company>Blackcat Data Solutions Ltd</Company>
-    <Authors>Jake Morgan</Authors>
-    <Copyright>© 2026 Blackcat Data Solutions Ltd</Copyright>
     <Description>SQL Server storage performance, pressure and cost analysis. https://blackcat.wales</Description>
-    <Version>2.2.0</Version>
 
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
@@ -37,17 +34,16 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
-    <Resource Include="..\..\tools\Get-DiskLuns.ps1" Link="Assets\Get-DiskLuns.ps1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <!-- Packages (SqlClient, SQLite, OxyPlot, WebView2, Azure.Identity…) come with the library. -->
+    <ProjectReference Include="..\SQLDiskMonitor.Core\SQLDiskMonitor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct reference so WebView2's build targets run for the exe as before (PDF export); same version as the library. -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
-    <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
-    <PackageReference Include="System.Management" Version="10.0.12" />
   </ItemGroup>
 
 </Project>
