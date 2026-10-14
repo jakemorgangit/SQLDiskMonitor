@@ -92,7 +92,10 @@ public class SqlSource(ServerConnection server) : ISnapshotSource
                 b.Authentication = SqlAuthenticationMethod.ActiveDirectoryIntegrated;
                 break;
             case AuthMode.EntraPassword:
+                // Deprecated by Microsoft (SqlClient 7 marks it obsolete) but still supported; kept for existing saved servers.
+#pragma warning disable CS0618
                 b.Authentication = SqlAuthenticationMethod.ActiveDirectoryPassword;
+#pragma warning restore CS0618
                 b.UserID = s.Username;
                 b.Password = password ?? CredentialStore.LoadPassword(s.Id);
                 break;
