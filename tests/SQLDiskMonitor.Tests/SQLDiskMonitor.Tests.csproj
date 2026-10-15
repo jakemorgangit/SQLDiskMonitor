@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SQLDiskMonitor\SQLDiskMonitor.csproj" />
+    <ProjectReference Include="..\..\src\SQLDiskMonitor.Core\SQLDiskMonitor.Core.csproj" />
   </ItemGroup>
 
 </Project>

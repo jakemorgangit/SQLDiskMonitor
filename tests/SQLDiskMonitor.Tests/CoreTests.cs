@@ -561,3 +561,23 @@ public class SqlServerIntegrationTests
         Assert.NotEmpty(batch!.Volumes);
     }
 }
+
+public class HostedConnectionTests
+{
+    [Fact]
+    public void Hosted_connection_string_is_used_as_is()
+    {
+        const string cs = "Data Source=prod01;Initial Catalog=master;Integrated Security=True;Application Name=Blackcat Studio – Disk monitor";
+        var s = new ServerConnection { Name = "Prod", Address = "prod01", Auth = AuthMode.Sql, Username = "ignored", ExternalConnectionString = () => cs };
+        Assert.True(s.IsExternal);
+        Assert.Equal(cs, SqlSource.BuildConnectionString(s));
+    }
+
+    [Fact]
+    public void A_hosted_server_called_demo_is_not_the_demo_server()
+    {
+        var s = new ServerConnection { Name = "demo", Address = "demo", ExternalConnectionString = () => "Data Source=demo" };
+        Assert.False(s.IsDemo);
+        Assert.True(new ServerConnection { Address = "demo" }.IsDemo);
+    }
+}

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\build\Version.props" />
+
+  <!-- Everything except the standalone shell: models, collector, SQLite store, Azure, reports, view models and views.
+       SQLDiskMonitor.exe hosts it in its own window; other apps (Blackcat Studio) host DiskMonitorView in a tab. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>SQLDiskMonitor.Core</AssemblyName>
+    <RootNamespace>SQLDiskMonitor</RootNamespace>
+    <!-- Fluent ThemeMode is flagged experimental; we rely on it for light/dark switching -->
+    <NoWarn>$(NoWarn);WPF0001;MVVMTK0045</NoWarn>
+    <AssemblyTitle>SQL Disk Monitor</AssemblyTitle>
+    <Description>SQL Server storage performance, pressure and cost analysis. https://blackcat.wales</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\tools\Get-DiskLuns.ps1" Link="Assets\Get-DiskLuns.ps1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <!-- SqlClient 7 ships Microsoft Entra ID (Active Directory *) authentication in a separate package. -->
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+    <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>
